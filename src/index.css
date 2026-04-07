@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bebas Neue", sans-serif;
+  --font-urban: "Space Grotesk", sans-serif;
+  
+  --color-urban-black: #000000;
+  --color-urban-gray: #111111;
+  --color-urban-yellow: #cebd67;
+  --color-urban-red: #ffffff; /* Changing red to white to stick to black/white/yellow theme */
+}
+
+body {
+  background-color: var(--color-urban-black);
+  color: #ffffff;
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+.font-urban {
+  font-family: var(--font-urban);
+}
+
+/* Street Style Accents */
+.street-border {
+  border: 2px solid #ffffff;
+  box-shadow: 4px 4px 0px var(--color-urban-yellow);
+}
+
+.street-button {
+  position: relative;
+  transition: all 0.2s;
+}
+
+.street-button:active {
+  transform: translate(2px, 2px);
+}
+
+.street-card {
+  background: var(--color-urban-gray);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.3s;
+}
+
+.street-card:hover {
+  border-color: var(--color-urban-yellow);
+}

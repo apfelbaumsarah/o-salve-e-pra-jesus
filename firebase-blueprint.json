@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "registration": {
+      "title": "Registration",
+      "description": "User registration for 'O Salve' event",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" },
+        "city": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "acceptedJesus": { "type": "boolean" },
+        "wantsUpdates": { "type": "boolean" },
+        "prayerRequest": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "whatsapp", "acceptedJesus", "wantsUpdates", "createdAt"]
+    },
+    "banner": {
+      "title": "Banner",
+      "description": "Home page carousel banners",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "order": { "type": "number" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["imageUrl", "title", "order", "active"]
+    },
+    "live": {
+      "title": "Live Stream",
+      "description": "YouTube live stream links",
+      "type": "object",
+      "properties": {
+        "youtubeId": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "isMain": { "type": "boolean" }
+      },
+      "required": ["youtubeId", "title", "date", "isMain"]
+    },
+    "event": {
+      "title": "Event",
+      "description": "Upcoming events",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["title", "date", "location"]
+    },
+    "prayerRequest": {
+      "title": "Prayer Request",
+      "description": "Dedicated prayer requests",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "request": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "request", "createdAt"]
+    },
+    "settings": {
+      "title": "Site Settings",
+      "description": "Global site configuration",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "googleFontsUrl": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "instagramUrl": { "type": "string" },
+        "youtubeUrl": { "type": "string" }
+      },
+      "required": ["siteName"]
+    }
+  },
+  "firestore": {
+    "registrations": { "schema": "registration", "description": "User registrations" },
+    "banners": { "schema": "banner", "description": "Home carousel banners" },
+    "lives": { "schema": "live", "description": "YouTube live streams" },
+    "events": { "schema": "event", "description": "Upcoming events list" },
+    "prayerRequests": { "schema": "prayerRequest", "description": "Public prayer requests" },
+    "settings": { "schema": "settings", "description": "Global site configuration" }
+  }
+}

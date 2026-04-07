@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: registrations
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - whatsapp: string (required, 8-20 chars)
+    //   - email: string (optional, valid email)
+    //   - city: string (optional, 0-50 chars)
+    //   - neighborhood: string (optional, 0-50 chars)
+    //   - acceptedJesus: bool (required)
+    //   - wantsUpdates: bool (required)
+    //   - prayerRequest: string (optional, 0-500 chars)
+    //   - message: string (optional, 0-500 chars)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, 'admin' or 'user')
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email != null &&
+        (exists(/databases/$(database)/documents/team/$(request.auth.token.email)) ||
+         (request.auth.token.email == "sarahb.contato@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll(['name', 'whatsapp', 'acceptedJesus', 'wantsUpdates', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.whatsapp is string && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 20 &&
+             data.acceptedJesus is bool &&
+             data.wantsUpdates is bool &&
+             data.createdAt is timestamp &&
+             (!('email' in data) || data.email == "" || isValidEmail(data.email)) &&
+             (!('city' in data) || data.city is string) &&
+             (!('neighborhood' in data) || data.neighborhood is string) &&
+             (!('prayerRequest' in data) || data.prayerRequest is string) &&
+             (!('message' in data) || data.message is string);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /registrations/{registrationId} {
+      allow create: if true;
+      allow read, list, update, delete: if isAdmin();
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /lives/{liveId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /prayerRequests/{requestId} {
+      allow create: if true;
+      allow read, list, update, delete: if isAdmin();
+    }
+
+    match /team/{email} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}
