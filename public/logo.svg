@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 310" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,800;0,900;1,400&amp;display=swap');
+      .t1 {
+        font-family: 'Barlow Condensed', Impact, 'Arial Narrow', sans-serif;
+        font-weight: 900;
+        font-size: 118px;
+        fill: white;
+        letter-spacing: -2px;
+      }
+      .t2-small {
+        font-family: 'Barlow Condensed', Impact, 'Arial Narrow', sans-serif;
+        font-weight: 400;
+        font-style: italic;
+        font-size: 46px;
+        fill: white;
+      }
+      .t2-big {
+        font-family: 'Barlow Condensed', Impact, 'Arial Narrow', sans-serif;
+        font-weight: 900;
+        font-size: 152px;
+        fill: white;
+        letter-spacing: -3px;
+      }
+    </style>
+  </defs>
+  <!-- Line 1: O SĀLVE! -->
+  <text x="10" y="128" class="t1">O S&#x100;LVE!</text>
+  <!-- Line 2: é pra + JESUS -->
+  <text x="10" y="198" class="t2-small">é pra</text>
+  <text x="108" y="298" class="t2-big">JESUS</text>
+</svg>

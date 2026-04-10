@@ -49,20 +49,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 md:h-24">
           <Link to="/" className="flex items-center gap-2">
-            {settings.logo_url ? (
-              <img
-                src={settings.logo_url}
-                alt={siteName}
-                className="h-16 md:h-20 w-auto object-contain brightness-0 invert"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="font-display text-2xl text-white tracking-wider">
-                {siteName.split(' ').map((word: string, i: number, arr: string[]) => (
-                  <span key={i} className={i === arr.length - 1 ? 'text-urban-yellow' : ''}>{word}{' '}</span>
-                ))}
-              </span>
-            )}
+            <img src="/logo.svg" alt={siteName} className="h-12 md:h-16 w-auto object-contain" />
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
