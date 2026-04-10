@@ -81,7 +81,7 @@ const LiveStream = () => {
             onClick={handleShare}
             className="flex items-center gap-2 px-6 py-3 bg-urban-gray border border-white/10 rounded-xl text-white font-bold hover:bg-white/5 transition-colors"
           >
-            <Share2 size={20} /> COMPARTILHAR TRANSMISSAO
+            <Share2 size={20} /> COMPARTILHAR TRANSMISSÃO
           </button>
         </div>
 
@@ -99,7 +99,7 @@ const LiveStream = () => {
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
                   <Youtube size={64} className="text-gray-700 mb-4" />
-                  <p className="text-gray-500 font-urban">Nenhuma transmissao agendada no momento.</p>
+                  <p className="text-gray-500 font-urban">Nenhuma transmissão agendada no momento.</p>
                 </div>
               )}
             </div>
@@ -120,8 +120,8 @@ const LiveStream = () => {
             <div className="street-card p-8 rounded-2xl">
               <h3 className="font-display text-3xl text-white mb-4">SOBRE O SALVE</h3>
               <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                Nossas transmissoes acontecem para que a palavra de Deus alcance todos os lugares.
-                Acompanhe ao vivo e interaja conosco atraves do chat oficial no YouTube.
+                Nossas transmissões acontecem para que a palavra de Deus alcance todos os lugares.
+                Acompanhe ao vivo e interaja conosco através do chat oficial no YouTube.
               </p>
               <a
                 href="https://youtube.com"
@@ -134,22 +134,22 @@ const LiveStream = () => {
             </div>
 
             <div className="bg-urban-yellow/10 p-8 rounded-2xl border border-urban-yellow/20">
-              <h3 className="font-display text-3xl text-urban-yellow mb-2">PRECISA DE ORACAO?</h3>
+              <h3 className="font-display text-3xl text-urban-yellow mb-2">PRECISA DE ORAÇÃO?</h3>
               <p className="text-gray-400 text-sm mb-6">
-                Enquanto assiste, voce pode deixar seu pedido de oracao e nossa equipe estara intercedendo por voce.
+                Enquanto assiste, você pode deixar seu pedido de oração e nossa equipe estará intercedendo por você.
               </p>
               <a
                 href="/oracao"
                 className="inline-block w-full text-center py-3 bg-urban-yellow text-urban-black font-bold rounded-lg hover:bg-yellow-600 transition-colors"
               >
-                PEDIR ORACAO
+                PEDIR ORAÇÃO
               </a>
             </div>
           </div>
         </div>
 
         <div>
-          <h2 className="font-display text-5xl text-white mb-8">TRANSMISSOES <span className="text-urban-yellow">ANTERIORES</span></h2>
+          <h2 className="font-display text-5xl text-white mb-8">TRANSMISSÕES <span className="text-urban-yellow">ANTERIORES</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {lives.filter((l) => l.id !== mainLive?.id).map((live) => (
               <motion.div

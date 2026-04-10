@@ -10,6 +10,7 @@ import LiveStream from './components/LiveStream';
 import PrayerRequests from './components/PrayerRequests';
 import FoodDonation from './components/FoodDonation';
 import AboutTheSalve from './components/AboutTheSalve';
+import Volunteers from './components/Volunteers';
 import { supabase } from './supabase';
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
             <Route path="/cadastro" element={<RegistrationForm />} />
             <Route path="/ao-vivo" element={<LiveStream />} />
             <Route path="/oracao" element={<PrayerRequests />} />
+            <Route path="/voluntarios" element={<Volunteers />} />
             <Route path="/arrecadacao" element={<FoodDonation />} />
             <Route path="/qrcode" element={<QRCodeDisplay />} />
             <Route path="/historia" element={<AboutTheSalve />} />
@@ -64,13 +66,13 @@ function App() {
         </main>
         <footer className="bg-urban-gray py-12 border-t border-white/5 text-center px-4">
           <div className="max-w-7xl mx-auto">
-            <h3 className="font-display text-3xl text-white mb-4 tracking-wider">O SALVE <span className="text-urban-yellow">E PRA JESUS</span></h3>
+            <h3 className="font-display text-3xl text-white mb-4 tracking-wider">O SALVE <span className="text-urban-yellow">É PRA JESUS</span></h3>
             <p className="font-urban text-gray-500 text-sm mb-6">
               "Ide por todo o mundo, pregai o evangelho a toda criatura." <br />
               <span className="font-bold">Marcos 16:15</span>
             </p>
             <div className="flex justify-center gap-4 mb-8">
-              <a href="https://www.instagram.com/salve_pra_jesus/" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-urban-yellow hover:bg-urban-yellow/10 transition-all">
+              <a href="https://www.instagram.com/salveprajesus" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-urban-yellow hover:bg-urban-yellow/10 transition-all">
                 <Instagram size={24} />
               </a>
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all">
@@ -81,7 +83,7 @@ function App() {
               </a>
             </div>
             <div className="text-gray-600 text-xs font-urban uppercase tracking-widest">
-              &copy; {new Date().getFullYear()} O SALVE E PRA JESUS &bull; TODOS OS DIREITOS RESERVADOS
+              &copy; {new Date().getFullYear()} O SALVE É PRA JESUS &bull; TODOS OS DIREITOS RESERVADOS
             </div>
           </div>
         </footer>

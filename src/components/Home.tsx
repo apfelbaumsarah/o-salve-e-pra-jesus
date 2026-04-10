@@ -129,7 +129,7 @@ const Home = () => {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-urban-gray">
               <div className="text-center">
-                <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE E PRA JESUS</h1>
+                <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE É PRA JESUS</h1>
                 <p className="font-urban text-gray-400">EM BREVE NOVIDADES</p>
               </div>
             </div>
@@ -157,11 +157,11 @@ const Home = () => {
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
           <div>
-            <h2 className="font-display text-5xl text-white mb-2">PROXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
-            <p className="font-urban text-gray-400">Nao perca o que Deus esta fazendo em nossa cidade.</p>
+            <h2 className="font-display text-5xl text-white mb-2">PRÓXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
+            <p className="font-urban text-gray-400">Não perca o que Deus está fazendo em nossa cidade.</p>
           </div>
           <Link to="/ao-vivo" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
-            VER PROGRAMACAO COMPLETA <ArrowRight size={20} />
+            VER PROGRAMAÇÃO COMPLETA <ArrowRight size={20} />
           </Link>
         </div>
 
@@ -204,13 +204,13 @@ const Home = () => {
       <section className="bg-urban-yellow py-20 overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <div className="text-[200px] font-display whitespace-nowrap animate-pulse">
-            O SALVE E PRA JESUS O SALVE E PRA JESUS
+            O SALVE É PRA JESUS O SALVE É PRA JESUS
           </div>
         </div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <h2 className="font-display text-6xl text-urban-black mb-6">VOCE JA DEU O SEU <span className="text-white">SALVE?</span></h2>
+          <h2 className="font-display text-6xl text-urban-black mb-6">VOCÊ JÁ DEU O SEU <span className="text-white">SALVE?</span></h2>
           <p className="font-urban text-urban-black/80 text-xl mb-10">
-            Se voce aceitou Jesus ou quer saber mais sobre como caminhar com Ele, clique no botao abaixo.
+            Se você aceitou Jesus ou quer saber mais sobre como caminhar com Ele, clique no botão abaixo.
           </p>
           <Link
             to="/cadastro"

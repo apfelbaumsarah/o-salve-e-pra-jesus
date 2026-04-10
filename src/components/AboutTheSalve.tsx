@@ -33,7 +33,7 @@ const AboutTheSalve = () => {
 
               <div className="space-y-6 text-gray-400 font-urban text-lg leading-relaxed">
                 <p>
-                  A <strong className="text-white">Salve</strong> começou como uma festa. Era um evento voltado para entretenimento, que cresceu, ganhou alcance e reuniu muitas pessoas, principalmente nas redes sociais.
+                  A <strong className="text-white">SALVE</strong> começou como uma festa. Era um evento voltado para entretenimento, que cresceu, ganhou alcance e reuniu muitas pessoas, principalmente nas redes sociais.
                 </p>
                 <p>
                   Com o tempo, algo mudou de forma real. O fundador teve um encontro com Jesus, e isso transformou completamente a forma de enxergar tudo o que estava sendo construído. O que antes fazia sentido, já não fazia mais da mesma forma.
@@ -42,16 +42,16 @@ const AboutTheSalve = () => {
                   Não foi uma decisão de simplesmente encerrar, porque já existia um alcance e uma conexão com muitas pessoas. Mas também não fazia sentido continuar do mesmo jeito. A escolha foi <strong className="text-urban-yellow">dar um novo significado</strong> para aquilo que já existia.
                 </p>
                 <p>
-                  A partir disso, a Salve deixou de ser apenas um evento e passou a carregar um propósito diferente. Hoje, ela se tornou um movimento que busca criar um ambiente de encontro, onde a presença, o cuidado e a mensagem de Jesus são vividos de forma simples e acessível.
+                  A partir disso, a SALVE deixou de ser apenas um evento e passou a carregar um propósito diferente. Hoje, ela se tornou um movimento que busca criar um ambiente de encontro, onde a presença, o cuidado e a mensagem de Jesus são vividos de forma simples e acessível.
                 </p>
                 <p>
                   Não existe um formato fechado, nem uma exigência para fazer parte. Existe um convite aberto para estar presente, viver o momento e se aproximar de algo que vai além do que é visível.
                 </p>
                 <p>
-                  A Salve hoje não se define pelo que foi, mas pelo que <strong className="text-urban-yellow">decidiu se tornar</strong>: um espaço aberto, vivo e acessível, onde pessoas podem se encontrar, se aproximar e, de alguma forma, serem tocadas por Deus.
+                  A SALVE hoje não se define pelo que foi, mas pelo que <strong className="text-urban-yellow">decidiu se tornar</strong>: um espaço aberto, vivo e acessível, onde pessoas podem se encontrar, se aproximar e, de alguma forma, serem tocadas por Deus.
                 </p>
                 <p>
-                  E talvez isso também diga muito sobre quem faz parte dela. Porque assim como a Salve não se define pelo que já foi um dia, a gente também não.
+                  E talvez isso também diga muito sobre quem faz parte dela. Porque assim como a SALVE não se define pelo que já foi um dia, a gente também não.
                 </p>
                 <p>
                   São pessoas comuns, muitas vezes <strong className="text-urban-yellow">improváveis</strong>, que decidiram dizer sim e fazer parte de algo maior. Gente que talvez ninguém apostaria, mas que hoje está disponível para servir, construir e viver isso junto.
@@ -76,7 +76,7 @@ const AboutTheSalve = () => {
                 </div>
                 <h4 className="font-display text-2xl text-white mb-2">PARA TODOS</h4>
                 <p className="font-urban text-gray-500 text-sm leading-relaxed">
-                  Não é sobre um tipo específico de pessoa. A Salve é para quem já caminha na fé, para quem está recomeçando, para quem ainda está buscando ou simplesmente sente no coração que deve estar ali.
+                  Não é sobre um tipo específico de pessoa. A SALVE é para quem já caminha na fé, para quem está recomeçando, para quem ainda está buscando ou simplesmente sente no coração que deve estar ali.
                 </p>
               </motion.div>
 

@@ -188,8 +188,6 @@ export default function AdminPanel() {
       query = query.order('date', { ascending: false });
     } else if (tab === 'events') {
       query = query.order('date', { ascending: true });
-    } else if (tab === 'team') {
-      query = query.order('name', { ascending: true });
     } else if (tab === 'volunteers') {
       query = query.order('created_at', { ascending: false });
     }

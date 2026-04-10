@@ -2,7 +2,7 @@
   "entities": {
     "registration": {
       "title": "Registration",
-      "description": "User registration for 'O Salve' event",
+      "description": "User registration for 'O SALVE' event",
       "type": "object",
       "properties": {
         "name": { "type": "string" },

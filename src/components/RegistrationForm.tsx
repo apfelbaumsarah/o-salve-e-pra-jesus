@@ -240,40 +240,37 @@ export default function RegistrationForm() {
                 type="button"
                 onClick={() => setDecisionChoice('today')}
                 className={cn(
-                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2 flex items-center justify-between",
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
                   decisionChoice === 'today' 
                     ? "bg-urban-yellow border-urban-yellow text-urban-black" 
                     : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
                 )}
               >
                 <span>TOMEI MINHA DECISÃO E ENTREGUEI MINHA VIDA A JESUS HOJE</span>
-                <span className="text-xl">🙌</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDecisionChoice('knowing')}
                 className={cn(
-                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2 flex items-center justify-between",
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
                   decisionChoice === 'knowing' 
                     ? "bg-urban-yellow border-urban-yellow text-urban-black" 
                     : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
                 )}
               >
                 <span>AINDA ESTOU CONHECENDO E QUERO SABER MAIS</span>
-                <span className="text-xl">🔍</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDecisionChoice('already')}
                 className={cn(
-                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2 flex items-center justify-between",
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
                   decisionChoice === 'already' 
                     ? "bg-urban-yellow border-urban-yellow text-urban-black" 
                     : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
                 )}
               >
                 <span>JÁ CAMINHO COM JESUS (SOU CRISTÃO)</span>
-                <span className="text-xl">✝️</span>
               </button>
             </div>
           </div>
@@ -295,7 +292,16 @@ export default function RegistrationForm() {
                   {formData.wants_updates && <CheckCircle size={16} className="text-white" />}
                 </div>
               </div>
-              <span className="font-urban text-gray-300">Quero receber avisos dos próximos eventos</span>
+              <span
+                className={cn(
+                  "font-urban text-sm md:text-base px-3 py-1.5 rounded-lg border transition-all",
+                  formData.wants_updates
+                    ? "text-urban-yellow border-urban-yellow/40 bg-urban-yellow/10"
+                    : "text-gray-200 border-white/10 bg-white/5 group-hover:border-urban-yellow/30"
+                )}
+              >
+                Quero receber avisos dos próximos eventos
+              </span>
             </label>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBasket, MapPin, Calendar, ArrowLeft, Heart, X, Coffee, Utensils, Scissors, Box, Gift, ChevronDown, HeartHandshake } from 'lucide-react';
+import { ShoppingBasket, MapPin, Calendar, ArrowLeft, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { VolunteerModal } from './VolunteerModal';
@@ -47,6 +47,23 @@ const FoodDonation = () => {
       tags: ["Enlatados", "Sardinha", "Molho de Tomate"]
     }
   ];
+  const waysToServe = [
+    {
+      title: 'Presença no dia',
+      description:
+        'Servir na recepção, entrega de doações, cuidado com famílias e apoio em cada detalhe da ação.'
+    },
+    {
+      title: 'Talentos e dons',
+      description:
+        'Compartilhar escuta, oração, cuidado pessoal, educação, arte, mídia ou qualquer talento que leve dignidade.'
+    },
+    {
+      title: 'Bastidores e logística',
+      description:
+        'Ajudar na montagem, transporte, organização antes e depois, para que tudo aconteça com excelência.'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
@@ -62,7 +79,7 @@ const FoodDonation = () => {
             </div>
             <h1 className="font-display text-6xl md:text-7xl text-white mb-6 leading-none">AJUDE QUEM <br /><span className="text-urban-yellow">PRECISA</span></h1>
             <p className="font-urban text-gray-400 text-lg mb-8 leading-relaxed">
-              O Salve é pra Jesus também é sobre amar o próximo de forma tangível. Durante nossos cultos a céu aberto, unimos forças para levar mantimentos e estender a mão para famílias em situação de vulnerabilidade.
+              O SALVE é pra Jesus também é sobre amar o próximo de forma tangível. Durante nossos cultos a céu aberto, unimos forças para levar mantimentos e estender a mão para famílias em situação de vulnerabilidade.
             </p>
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-urban-gray rounded-full border border-white/10 text-white text-sm font-bold font-urban">
@@ -126,9 +143,7 @@ const FoodDonation = () => {
           
           <h2 className="font-display text-4xl md:text-5xl text-white mb-6">SUA PRESENÇA TAMBÉM É <span className="text-urban-yellow">DOAÇÃO</span></h2>
           <p className="font-urban text-gray-400 text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-            Jesus viveu de um jeito que não deixava ninguém invisível. Percebia quem precisava, tocava, cuidava e se envolvia de forma real. Não era um cuidado distante ou superficial, era presença de verdade.<br />
-            E foi esse amor que o levou a se entregar na cruz por todos nós.<br />
-            <strong className="text-white font-normal mt-4 block">É esse coração que inspira tudo o que a gente faz aqui.</strong>
+            Cada doação é mais do que um item: é cuidado em forma de gesto. Se você quer servir com a gente, escolha abaixo o próximo passo e venha fazer parte dessa missão.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center mb-10">
@@ -137,7 +152,7 @@ const FoodDonation = () => {
               className="px-8 py-4 bg-transparent text-white border-2 border-white/10 font-bold uppercase tracking-wider rounded-xl hover:bg-white/5 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban">
               QUERO SER VOLUNTÁRIO
             </button>
-            <button 
+            <button
               onClick={() => setIsModalOpen(true)}
               className="px-8 py-4 bg-urban-yellow text-urban-black border-2 border-urban-yellow font-bold uppercase tracking-wider rounded-xl hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban street-border flex items-center justify-center gap-2">
               <ChevronDown size={18} /> OUTRAS FORMAS DE AJUDAR
@@ -180,58 +195,17 @@ const FoodDonation = () => {
                 A nossa vocação é cuidar de vidas, e há sempre mais um jeito de amar. Se você não puder levar alimentos perecíveis no momento, existem muitas outras formas de estender a mão.
               </p>
 
-              <div className="space-y-10">
-                <div>
-                  <div className="flex items-center gap-3 mb-4 text-white">
-                    <div className="p-3 bg-urban-yellow/10 rounded-xl">
-                      <Gift size={24} className="text-urban-yellow" />
-                    </div>
-                    <h4 className="font-display text-2xl tracking-wide">DOAÇÕES EXTRAS</h4>
-                  </div>
-                  <p className="font-urban text-gray-400 mb-4 text-sm leading-relaxed">
-                    Sabe aquelas peças que já não contam mais a sua história, mas podem aquecer a de alguém nas ruas e favelas? Aceitamos:
-                  </p>
-                  <ul className="grid grid-cols-2 gap-3 text-sm text-gray-300 font-urban">
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">• Roupas em bom estado</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">• Calçados higienizados</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">• Cobertores e agasalhos</li>
-                  </ul>
+              <div>
+                <div className="mb-8 text-white">
+                  <h4 className="font-display text-3xl tracking-wide">COMO VOCÊ PODE SERVIR</h4>
                 </div>
-
-                <div>
-                  <div className="flex items-center gap-3 mb-4 text-white">
-                    <div className="p-3 bg-urban-yellow/10 rounded-xl">
-                      <Scissors size={24} className="text-urban-yellow" />
+                <div className="grid md:grid-cols-3 gap-4">
+                  {waysToServe.map((item) => (
+                    <div key={item.title} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                      <h5 className="font-display text-xl text-white mb-3">{item.title}</h5>
+                      <p className="font-urban text-gray-400 leading-relaxed text-sm">{item.description}</p>
                     </div>
-                    <h4 className="font-display text-2xl tracking-wide">SEUS TALENTOS CURAM</h4>
-                  </div>
-                  <p className="font-urban text-gray-400 mb-4 text-sm leading-relaxed">
-                    Mais do que serviços, o que transforma vidas é presença, escuta e cuidado genuíno. Se você tem um dom para compartilhar, independente de qual é, há espaço aqui:
-                  </p>
-                  <ul className="grid grid-cols-2 gap-3 text-sm text-gray-300 font-urban">
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">🤝 Escuta e Acolhimento</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">🧠 Psicologia / Aconselhamento</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">📚 Educação e Reforço</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">✂️ Cabelo e Barba</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-3 mb-4 text-white">
-                    <div className="p-3 bg-urban-yellow/10 rounded-xl">
-                      <Box size={24} className="text-urban-yellow" />
-                    </div>
-                    <h4 className="font-display text-2xl tracking-wide">FAZER PARTE DO MOVIMENTO</h4>
-                  </div>
-                  <p className="font-urban text-gray-400 mb-4 text-sm leading-relaxed">
-                    A Salve se sustenta por pessoas que decidiram dizer sim. Se você quer contribuir para que mais ações como essa aconteçam, há espaço pra você:
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-300 font-urban">
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg px-4">📲 Divulgar o evento e ampliar o alcance nas redes</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg px-4">🤝 Ajudar na recepção e acolhimento do público no dia</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg px-4">🚚 Apoiar na logística, transporte e montagem do espaço</li>
-                    <li className="flex items-center gap-2 bg-black/20 p-2 rounded-lg px-4">💸 Contribuir financeiramente para as próximas edições</li>
-                  </ul>
+                  ))}
                 </div>
               </div>
 
