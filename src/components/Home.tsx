@@ -43,7 +43,7 @@ const Home = () => {
       metaDescription.name = 'description';
       document.head.appendChild(metaDescription);
     }
-    metaDescription.content = 'Canal oficial Salve pra Jesus. Eventos, registros e conexão para a nova geração.';
+    metaDescription.content = 'Canal oficial SALVE pra Jesus. Eventos, registros e conexão para a nova geração.';
   }, []);
 
   useEffect(() => {
@@ -188,10 +188,10 @@ const Home = () => {
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="py-2">
           <h1 className="font-display text-4xl md:text-6xl text-urban-yellow tracking-tight mb-4">
-            O MOVIMENTO É REAL.
+            O SALVE É REAL.
           </h1>
           <p className="font-urban text-gray-300 text-base md:text-xl leading-relaxed max-w-3xl">
-            Não é sobre um dia, é sobre o que fica depois que as luzes apagam. O Salve pra Jesus surgiu para ser voz em meio ao barulho. Uma geração, um propósito e a mesma verdade, falada do nosso jeito.
+            Não é sobre um dia, é sobre o que fica depois que as luzes apagam. O SALVE pra Jesus surgiu para ser voz em meio ao barulho. Uma geração, um propósito e a mesma verdade, falada do nosso jeito.
             <br />
             <br />
             Aqui você vê como tudo começou e para onde estamos indo.
@@ -205,8 +205,8 @@ const Home = () => {
             <h2 className="font-display text-5xl text-white mb-2">PRÓXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
             <p className="font-urban text-gray-400">Não perca o que Deus está fazendo em nossa cidade.</p>
           </div>
-          <Link to="/cadastro" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
-            CONFIRMAR PRESENÇA <ArrowRight size={20} />
+          <Link to="/historia" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
+            CONHECER A HISTÓRIA <ArrowRight size={20} />
           </Link>
         </div>
 

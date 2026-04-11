@@ -15,7 +15,7 @@ import { supabase } from './supabase';
 
 function App() {
   useEffect(() => {
-    document.title = 'Salve pra Jesus | Movimento Cristão em Campinas';
+    document.title = 'SALVE pra Jesus | Movimento Cristão em Campinas';
     const fetchSettings = async () => {
       const { data } = await supabase.from('settings').select('site_name, google_fonts_url, font_family').eq('id', 1).single();
       if (!data) return;
