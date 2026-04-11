@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Send, CheckCircle, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Heart, Send, CheckCircle } from 'lucide-react';
 
 const PrayerRequests = () => {
   const [formData, setFormData] = useState({ name: '', request: '' });
@@ -36,11 +35,7 @@ const PrayerRequests = () => {
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-3xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-urban-yellow mb-8 transition-colors">
-          <ArrowLeft size={20} /> VOLTAR PARA O INÍCIO
-        </Link>
-
-        <div className="bg-urban-gray/80 p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
           <div className="flex items-center gap-4 mb-8">
             <div className="p-4 bg-urban-yellow/10 rounded-2xl border border-urban-yellow/20 text-urban-yellow">

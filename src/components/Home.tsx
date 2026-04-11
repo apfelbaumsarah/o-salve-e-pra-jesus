@@ -216,9 +216,9 @@ const Home = () => {
               <motion.div
                 key={event.id}
                 whileHover={{ y: -10 }}
-                className="street-card p-6 rounded-xl border-l-4 border-l-urban-yellow"
+                className="p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent"
               >
-                <div className="flex items-center gap-2 text-urban-yellow mb-4">
+                <div className="inline-flex items-center gap-2 text-urban-yellow mb-4 px-3 py-1.5 rounded-full border border-urban-yellow/25 bg-urban-yellow/10">
                   <Calendar size={18} />
                   <span className="font-urban font-bold text-sm uppercase">
                     {event.date ? format(new Date(event.date), "dd 'de' MMMM '•' HH'h'", { locale: ptBR }) : 'Data em breve'}
@@ -235,7 +235,7 @@ const Home = () => {
               </motion.div>
             ))
           ) : (
-            <div className="col-span-full text-center py-20 bg-urban-gray rounded-2xl border border-white/5">
+            <div className="col-span-full text-center py-20 rounded-2xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
               <p className="text-gray-500 font-urban">Nenhum evento agendado no momento.</p>
             </div>
           )}

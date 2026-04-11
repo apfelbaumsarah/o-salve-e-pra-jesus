@@ -117,7 +117,7 @@ const LiveStream = () => {
           </div>
 
           <div className="space-y-8">
-            <div className="street-card p-8 rounded-2xl">
+            <div className="p-8 rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
               <h3 className="font-display text-3xl text-white mb-4">SOBRE O SALVE</h3>
               <p className="text-gray-400 text-sm leading-relaxed mb-6">
                 Nossas transmissões acontecem para que a palavra de Deus alcance todos os lugares.
@@ -133,8 +133,8 @@ const LiveStream = () => {
               </a>
             </div>
 
-            <div className="bg-urban-yellow/10 p-8 rounded-2xl border border-urban-yellow/20">
-              <h3 className="font-display text-3xl text-urban-yellow mb-2">PRECISA DE ORAÇÃO?</h3>
+            <div className="p-8 rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
+              <h3 className="font-display text-3xl text-white mb-2">PRECISA DE ORAÇÃO?</h3>
               <p className="text-gray-400 text-sm mb-6">
                 Enquanto assiste, você pode deixar seu pedido de oração e nossa equipe estará intercedendo por você.
               </p>

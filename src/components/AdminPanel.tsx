@@ -1062,9 +1062,9 @@ export default function AdminPanel() {
                             )}
                           </div>
                         )}
-                        <div className="flex-grow overflow-hidden">
+                        <div className={cn("flex-grow min-w-0", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "overflow-visible" : "overflow-hidden")}>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className={cn("font-urban font-bold text-white text-lg truncate min-w-0 max-w-full", item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
+                            <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "whitespace-normal break-words leading-snug" : "truncate", item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
                             {item.accepted_jesus && (
                               <span className="shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] text-[10px] font-bold rounded uppercase tracking-wider">Aceitou Jesus</span>
                             )}

@@ -69,7 +69,7 @@ const AboutTheSalve = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
                 whileHover={{ y: -5 }}
-                className="street-card bg-urban-black/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl"
+                className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent border border-white/10 p-8 rounded-3xl"
               >
                 <div className="w-14 h-14 bg-urban-yellow/10 text-urban-yellow rounded-2xl flex items-center justify-center mb-6">
                   <Heart size={28} />
@@ -85,9 +85,9 @@ const AboutTheSalve = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.5 }}
                 whileHover={{ y: -5 }}
-                className="street-card bg-urban-black/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl md:mt-12"
+                className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent border border-white/10 p-8 rounded-3xl md:mt-12"
               >
-                <div className="w-14 h-14 bg-[#00FF66]/10 text-[#00FF66] rounded-2xl flex items-center justify-center mb-6">
+                <div className="w-14 h-14 bg-urban-yellow/10 text-urban-yellow rounded-2xl flex items-center justify-center mb-6">
                   <Users size={28} />
                 </div>
                 <h4 className="font-display text-2xl text-white mb-2">FEITO POR PESSOAS</h4>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBasket, MapPin, Calendar, ArrowLeft, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ShoppingBasket, MapPin, Calendar, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
 import { supabase } from '../supabase';
 import { VolunteerModal } from './VolunteerModal';
 
@@ -68,9 +67,6 @@ const FoodDonation = () => {
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-5xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-urban-yellow mb-8 transition-colors font-urban font-bold text-sm tracking-widest">
-          <ArrowLeft size={16} /> VOLTAR PARA O INÍCIO
-        </Link>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24 items-center">
           <div>
             <div className="flex items-center gap-2 text-urban-yellow mb-4">

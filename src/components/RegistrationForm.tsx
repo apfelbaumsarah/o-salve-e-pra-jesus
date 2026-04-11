@@ -80,8 +80,9 @@ export default function RegistrationForm() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full street-card p-12 rounded-3xl text-center border-t-8 border-t-urban-yellow"
+          className="max-w-md w-full p-12 rounded-3xl text-center border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent relative overflow-hidden"
         >
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
           <div className="flex justify-center mb-8">
             <div className="p-6 bg-urban-yellow/10 rounded-full text-urban-yellow">
               <CheckCircle size={80} />
@@ -110,7 +111,7 @@ export default function RegistrationForm() {
           <p className="font-urban text-gray-400 text-xl">Deixe seus dados para mantermos contato e crescermos juntos.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="street-card p-10 rounded-3xl space-y-8">
+        <form onSubmit={handleSubmit} className="p-10 rounded-3xl space-y-8 border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="md:col-span-2">
               <label className="block font-urban text-sm font-bold text-gray-400 uppercase mb-2">NOME COMPLETO *</label>
