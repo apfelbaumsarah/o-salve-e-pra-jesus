@@ -51,3 +51,12 @@ h1, h2, h3, .font-display {
 .street-card:hover {
   border-color: var(--color-urban-yellow);
 }
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

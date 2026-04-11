@@ -91,7 +91,7 @@ const FoodDonation = () => {
             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-urban-yellow/20 rounded-full blur-3xl pointer-events-none" />
             <div className="relative street-border rounded-[2.5rem] overflow-hidden aspect-square bg-urban-gray border-2 border-white/10 shadow-2xl">
               <img
-                src={settings.donation_image_url || "https://picsum.photos/seed/donation/800/800"}
+                src="/imagens/7.png"
                 alt="Ação Social"
                 className="w-full h-full object-cover opacity-80"
               />

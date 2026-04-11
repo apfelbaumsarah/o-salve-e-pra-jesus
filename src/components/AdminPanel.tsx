@@ -4,17 +4,17 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LogOut, LogIn, Users, Heart, Download, Search, Bell, UserPlus,
   Calendar, Phone, Image as ImageIcon, Radio, Plus,
-  Trash2, Check, X, Settings as SettingsIcon, Pencil, AlertTriangle,
-  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box
+  Trash2, Check, X, Pencil, AlertTriangle,
+  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../lib/utils';
 
-type Tab = 'dashboard' | 'registrations' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers';
+type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers';
 
-const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'banners', 'lives', 'events', 'prayers', 'team', 'settings'];
+const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings'];
 const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team'];
 
 
@@ -35,13 +35,16 @@ export default function AdminPanel() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [isTabLoading, setIsTabLoading] = useState(false);
-  const [filterRegistrations, setFilterRegistrations] = useState<'all' | 'acceptedJesus' | 'attendsChurch' | 'hasBible' | 'knowing' | 'wantsUpdates'>('all');
+  const [filterRegistrations, setFilterRegistrations] = useState<'all' | 'acceptedJesus' | 'attendsChurch' | 'hasBible' | 'noBible' | 'knowing' | 'wantsUpdates'>('all');
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingStatus, setEditingStatus] = useState('');
+  const [editingOwner, setEditingOwner] = useState('');
   const [editingNotes, setEditingNotes] = useState('');
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [saveStatusMsg, setSaveStatusMsg] = useState<'idle'|'ok'|'err'>('idle');
   const [teamRows, setTeamRows] = useState<any[]>([]);
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   
   // Login States
   const [email, setEmail] = useState('');
@@ -112,6 +115,14 @@ export default function AdminPanel() {
   };
 
   const loadTabData = async (tab: Tab) => {
+    if (tab === 'crm_pipeline') {
+      const { data: registrationsData } = await supabase
+        .from('registrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setData(registrationsData || []);
+      return;
+    }
     if (tab === 'settings') {
       const { data: sData } = await supabase.from('settings').select('*').eq('id', 1).single();
       if (sData) setSettings(sData);
@@ -231,7 +242,9 @@ export default function AdminPanel() {
         supabase.removeChannel(channelDed);
       };
     } else {
-      const tableName = activeTab === 'settings' ? 'settings' : (activeTab === 'dashboard' ? 'registrations' : getTableName(activeTab));
+      const tableName = activeTab === 'settings'
+        ? 'settings'
+        : (activeTab === 'dashboard' || activeTab === 'crm_pipeline' ? 'registrations' : getTableName(activeTab));
       const channel = supabase
         .channel(`admin-${activeTab}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
@@ -460,12 +473,26 @@ export default function AdminPanel() {
       }
     }
 
-    await supabase.from(tableName).delete().eq('id', itemToDelete);
-    await logDeletionAudit(tableName, itemToDelete, 1);
-    await loadTabData(activeTab);
-    setItemToDelete(null);
-    setDeletePassword('');
-    setDeleteError('');
+    try {
+      const { data: deletedRows, error: deleteError } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', itemToDelete)
+        .select('id');
+
+      if (deleteError) throw deleteError;
+      if (!deletedRows || deletedRows.length === 0) {
+        throw new Error('Nenhum registro foi removido. Verifique permissões de exclusão no Supabase.');
+      }
+
+      await logDeletionAudit(tableName, itemToDelete, deletedRows.length);
+      await loadTabData(activeTab);
+      setItemToDelete(null);
+      setDeletePassword('');
+      setDeleteError('');
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Não foi possível deletar este item.');
+    }
   };
 
 
@@ -494,6 +521,12 @@ export default function AdminPanel() {
   const togglePrayerStatus = async (id: string, currentStatus: boolean, source: string = 'registrations') => {
     if (!canEditTab(activeTab)) return;
     await supabase.from(source).update({ prayer_done: !currentStatus }).eq('id', id);
+    await loadTabData(activeTab);
+  };
+
+  const toggleBibleDeliveredStatus = async (id: string) => {
+    if (!canEditTab('registrations')) return;
+    await supabase.from('registrations').update({ has_bible: true }).eq('id', id);
     await loadTabData(activeTab);
   };
 
@@ -529,10 +562,59 @@ export default function AdminPanel() {
     novo:              { label: 'Novo',              color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',    dot: 'bg-blue-400' },
     contatado:         { label: 'Contatado',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/20', dot: 'bg-urban-yellow' },
     acompanhamento:    { label: 'Em Acompanhamento', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20', dot: 'bg-purple-400' },
+    sem_biblia:        { label: 'Sem Bíblia',        color: 'bg-amber-400/10 text-amber-300 border-amber-400/20', dot: 'bg-amber-300' },
     concluido:         { label: 'Concluído',         color: 'bg-green-500/10 text-green-400 border-green-500/20',  dot: 'bg-green-400' },
   };
 
   const getStatus = (item: any) => item.status || 'novo';
+  const hasNoBible = (item: any) =>
+    item?.has_bible === false ||
+    item?.has_bible === 'false' ||
+    item?.has_bible === 0 ||
+    item?.has_bible === '0';
+  const getPipelineStage = (item: any) => {
+    const currentStage = getStatus(item);
+    if (hasNoBible(item) && currentStage !== 'concluido') return 'sem_biblia';
+    return currentStage;
+  };
+
+  const parseAdminNotes = (notes: string | null | undefined) => {
+    const text = notes || '';
+    const match = text.match(/^RESPONSAVEL:\s*(.+)$/im);
+    const owner = match ? match[1].trim() : '';
+    const cleaned = text
+      .replace(/^RESPONSAVEL:\s*.+$/im, '')
+      .replace(/^\s+/, '')
+      .trim();
+    return { owner, notes: cleaned };
+  };
+
+  const buildAdminNotes = (owner: string, notes: string) => {
+    const ownerLine = owner.trim() ? `RESPONSAVEL: ${owner.trim()}` : '';
+    const notesPart = notes.trim();
+    if (ownerLine && notesPart) return `${ownerLine}\n\n${notesPart}`;
+    if (ownerLine) return ownerLine;
+    return notesPart;
+  };
+
+  const moveCadastroToStage = async (id: string, nextStatus: string) => {
+    if (!canEditTab('registrations')) return;
+    const { data: updated, error } = await supabase
+      .from('registrations')
+      .update({ status: nextStatus })
+      .eq('id', id)
+      .select('id,status');
+    if (!error && updated && updated.length > 0) {
+      setData(prev => prev.map((r) => (r.id === id ? { ...r, status: nextStatus } : r)));
+    }
+  };
+
+  const handlePipelineDrop = async (targetStage: string) => {
+    if (!draggedCardId) return;
+    await moveCadastroToStage(draggedCardId, targetStage);
+    setDraggedCardId(null);
+    setDragOverStage(null);
+  };
 
   const updateRegistrationStatus = async () => {
     if (!selectedRegistration) return;
@@ -542,7 +624,7 @@ export default function AdminPanel() {
     console.log('[CRM] Salvando status:', editingStatus, 'notas:', editingNotes, 'id:', selectedRegistration.id, 'tabela:', table);
     const { data: updated, error } = await supabase
       .from(table)
-      .update({ status: editingStatus, admin_notes: editingNotes })
+      .update({ status: editingStatus, admin_notes: buildAdminNotes(editingOwner, editingNotes) })
       .eq('id', selectedRegistration.id)
       .select();
     console.log('[CRM] Resultado:', { updated, error, rowsAffected: updated?.length });
@@ -550,8 +632,9 @@ export default function AdminPanel() {
     const zeroRows = !error && (!updated || updated.length === 0);
     if (!error && !zeroRows) {
       setSaveStatusMsg('ok');
-      setData(prev => prev.map(r => r.id === selectedRegistration.id ? { ...r, status: editingStatus, admin_notes: editingNotes } : r));
-      setSelectedRegistration((prev: any) => ({ ...prev, status: editingStatus, admin_notes: editingNotes }));
+      const nextAdminNotes = buildAdminNotes(editingOwner, editingNotes);
+      setData(prev => prev.map(r => r.id === selectedRegistration.id ? { ...r, status: editingStatus, admin_notes: nextAdminNotes } : r));
+      setSelectedRegistration((prev: any) => ({ ...prev, status: editingStatus, admin_notes: nextAdminNotes }));
       // força reload para garantir que o estado local reflita o banco
       setTimeout(() => { loadTabData(activeTab); setSaveStatusMsg('idle'); }, 800);
     } else {
@@ -652,7 +735,7 @@ export default function AdminPanel() {
   const frequentamIgreja = data.filter((d) => d.attends_church === true).length;
   const naoFrequentamIgreja = data.filter((d) => d.attends_church === false).length;
   const temBiblia = data.filter((d) => d.has_bible === true).length;
-  const naoTemBiblia = data.filter((d) => d.has_bible === false).length;
+  const naoTemBiblia = data.filter((d) => hasNoBible(d)).length;
   const aindaConhecendo = data.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
   const jaCaminha = data.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
 
@@ -678,6 +761,7 @@ export default function AdminPanel() {
         if (filterRegistrations === 'acceptedJesus') return item.accepted_jesus === true;
         if (filterRegistrations === 'knowing') return item.accepted_jesus === false && item.attends_church === false;
         if (filterRegistrations === 'wantsUpdates') return item.wants_updates === true;
+        if (filterRegistrations === 'noBible') return hasNoBible(item);
       }
       return true;
     })
@@ -688,7 +772,7 @@ export default function AdminPanel() {
       );
     })
     .sort((a, b) => {
-      const order: Record<string, number> = { novo: 0, contatado: 1, acompanhamento: 2, concluido: 3 };
+      const order: Record<string, number> = { novo: 0, contatado: 1, acompanhamento: 2, sem_biblia: 3, concluido: 4 };
       return (order[a.status || 'novo'] ?? 0) - (order[b.status || 'novo'] ?? 0);
     });
 
@@ -707,12 +791,12 @@ export default function AdminPanel() {
         <div className="flex flex-col gap-2 p-4 flex-grow overflow-y-auto">
           {canViewTab('dashboard') && <SidebarButton active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} icon={<LayoutDashboard size={20} />} label="Visão Geral" />}
           {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); setIsSidebarOpen(false); }} icon={<Users size={20} />} label="Cadastros" />}
+          {canViewTab('crm_pipeline') && <SidebarButton active={activeTab === 'crm_pipeline'} onClick={() => { setActiveTab('crm_pipeline'); setIsSidebarOpen(false); }} icon={<Box size={20} />} label="Pipeline CRM" />}
           {/* {canViewTab('banners') && <SidebarButton active={activeTab === 'banners'} onClick={() => { setActiveTab('banners'); setIsSidebarOpen(false); }} icon={<ImageIcon size={20} />} label="Banners" />} */}
           {/* canViewTab('lives') && <SidebarButton active={activeTab === 'lives'} onClick={() => { setActiveTab('lives'); setIsSidebarOpen(false); }} icon={<Radio size={20} />} label="Lives" /> */}
           {/* canViewTab('events') && <SidebarButton active={activeTab === 'events'} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }} icon={<Calendar size={20} />} label="Eventos" /> */}
           {canViewTab('prayers') && <SidebarButton active={activeTab === 'prayers'} onClick={() => { setActiveTab('prayers'); setIsSidebarOpen(false); }} icon={<Heart size={20} />} label="Orações" />}
           {/* {canViewTab('team') && <SidebarButton active={activeTab === 'team'} onClick={openTeamTab} icon={<Users size={20} />} label="Equipe" />} */}
-          {canViewTab('settings') && <SidebarButton active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }} icon={<SettingsIcon size={20} />} label="Configurações" />}
         </div>
         <div className="p-4 border-t border-white/10">
           <div className="px-4 py-2 mb-2">
@@ -816,7 +900,117 @@ export default function AdminPanel() {
             )
           )}
 
-          {activeTab === 'settings' && canViewTab('settings') ? (
+          {activeTab === 'crm_pipeline' ? (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="rounded-3xl bg-urban-gray/80 border border-white/10 p-6 md:p-8 flex flex-col gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)]">
+                <div>
+                  <h3 className="text-white font-display text-3xl uppercase tracking-wide mb-2">Pipeline CRM</h3>
+                  <p className="text-gray-400 font-urban">Visual em formato Trello com os dados reais de Cadastros.</p>
+                </div>
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Buscar nome, WhatsApp, cidade..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-urban-gray border border-white/10 rounded-xl text-white focus:border-urban-yellow/60 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto md:overflow-x-visible scrollbar-hidden pb-2">
+                <div className="grid grid-flow-col auto-cols-[88vw] gap-4 md:grid-flow-row md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:auto-cols-auto">
+                  {(['novo', 'contatado', 'acompanhamento', 'sem_biblia', 'concluido'] as const).map((stageKey) => {
+                    const cards = (data || [])
+                      .filter((item: any) => getPipelineStage(item) === stageKey)
+                      .filter((item: any) => {
+                        if (!normalizedSearchTerm) return true;
+                        return [item.name, item.whatsapp, item.city, item.neighborhood, item.email]
+                          .some((val) => String(val || '').toLowerCase().includes(normalizedSearchTerm));
+                      });
+                    const stageCfg = STATUS_CONFIG[stageKey];
+                    return (
+                      <div
+                        key={stageKey}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverStage(stageKey); }}
+                        onDragLeave={() => setDragOverStage((prev) => (prev === stageKey ? null : prev))}
+                        onDrop={() => handlePipelineDrop(stageKey)}
+                        className={cn(
+                          "rounded-3xl p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)]",
+                          dragOverStage === stageKey ? "ring-1 ring-urban-yellow/60 bg-urban-yellow/[0.06] shadow-[0_0_15px_rgba(255,232,31,0.18)]" : "ring-1 ring-white/6"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-display text-xl text-white tracking-wide uppercase">{stageCfg.label}</h4>
+                          <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold border', stageCfg.color)}>{cards.length}</span>
+                        </div>
+                        <div className="space-y-3 max-h-[65vh] overflow-y-auto scrollbar-hidden pr-1">
+                          {cards.map((item: any) => {
+                            const parsed = parseAdminNotes(item.admin_notes);
+                            return (
+                            <div
+                              key={item.id}
+                              draggable
+                              onDragStart={() => setDraggedCardId(item.id)}
+                              onDragEnd={() => { setDraggedCardId(null); setDragOverStage(null); }}
+                              onClick={() => {
+                                setSelectedRegistration(item);
+                                setEditingStatus(item.status || 'novo');
+                                setEditingOwner(parsed.owner);
+                                setEditingNotes(parsed.notes);
+                              }}
+                              className={cn(
+                                "bg-urban-gray rounded-2xl p-4 space-y-3 transition-all cursor-grab active:cursor-grabbing ring-1 ring-white/10 hover:ring-white/20 hover:shadow-[0_0_15px_rgba(255,232,31,0.1)]",
+                                draggedCardId === item.id ? "opacity-60 scale-[0.99]" : "opacity-100"
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2">
+                                  <GripVertical size={15} className="text-gray-500 mt-1 shrink-0" />
+                                  <h5 className="font-urban font-bold text-white leading-snug break-words">{item.name || 'Sem nome'}</h5>
+                                </div>
+                                {item.accepted_jesus && <span className="text-[10px] shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] rounded-full uppercase font-bold border border-[#00FF66]/20">Aceitou Jesus</span>}
+                              </div>
+                              <div className="text-xs text-gray-300 space-y-1 leading-relaxed">
+                                <p>{item.whatsapp || 'Sem WhatsApp'}</p>
+                                {item.city && <p>{item.city}{item.neighborhood ? ` • ${item.neighborhood}` : ''}</p>}
+                                <p className="text-gray-500">{item.created_at ? formatDate(item.created_at) : ''}</p>
+                                {parsed.owner && (
+                                  <p className="text-urban-yellow/90">Acompanhando: {parsed.owner}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between gap-2 pt-1">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {hasNoBible(item) && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/12 text-amber-300 uppercase font-bold border border-amber-300/20">Sem Bíblia</span>}
+                                  {item.wants_updates && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/12 text-purple-300 uppercase font-bold">Atualizações</span>}
+                                </div>
+                                <select
+                                  value={item.status || 'novo'}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => moveCadastroToStage(item.id, e.target.value)}
+                                  className="bg-urban-gray border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-urban-yellow/60 outline-none"
+                                >
+                                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                                    <option key={key} value={key}>{cfg.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )})}
+                          {cards.length === 0 && (
+                            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-white/15 bg-urban-gray/60 rounded-xl">
+                              Nenhum cadastro nesta etapa.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'settings' && canViewTab('settings') ? (
             <motion.form
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1001,6 +1195,12 @@ export default function AdminPanel() {
                       <Bell size={16} /> Querem Atualizações
                     </button>
                     <button
+                      onClick={() => { setActiveTab('registrations'); setFilterRegistrations('noBible'); }}
+                      className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'noBible' && activeTab === 'registrations') ? 'bg-amber-400 text-black shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-white/5 border border-white/10 text-amber-300 opacity-70 hover:opacity-100 hover:bg-white/10')}
+                    >
+                      <BookOpen size={16} /> Sem Bíblia
+                    </button>
+                    <button
                       onClick={() => setActiveTab(canViewTab('prayers') ? 'prayers' : 'registrations')}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', activeTab === 'prayers' ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'bg-white/5 border border-white/10 text-blue-400 hover:text-blue-300 hover:bg-white/10')}
                     >
@@ -1049,26 +1249,36 @@ export default function AdminPanel() {
                           <div className={cn(
                             "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl relative shrink-0",
                             item.accepted_jesus ? "bg-[#00FF66]/20 text-[#00FF66] shadow-[0_0_10px_rgba(0,255,102,0.2)]" : "bg-urban-yellow/10 text-urban-yellow",
-                            item.prayer_done && "opacity-30"
+                            activeTab === 'prayers' && item.prayer_done && "opacity-30"
                           )}>
                             {item.name ? item.name[0].toUpperCase() : '?'}
                             {item.prayer_request && (
                               <div className={cn(
                                 "absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-urban-gray flex items-center justify-center",
-                                item.prayer_done ? "bg-green-500" : "bg-blue-500"
+                                activeTab === 'prayers' && item.prayer_done ? "bg-green-500" : "bg-blue-500"
                               )}>
-                                {item.prayer_done ? <Check size={8} className="text-white" /> : <Heart size={8} className="text-white" fill="currentColor" />}
+                                {activeTab === 'prayers' && item.prayer_done ? <Check size={8} className="text-white" /> : <Heart size={8} className="text-white" fill="currentColor" />}
                               </div>
                             )}
                           </div>
                         )}
                         <div className={cn("flex-grow min-w-0", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "overflow-visible" : "overflow-hidden")}>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "whitespace-normal break-words leading-snug" : "truncate", item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
+                            <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "whitespace-normal break-words leading-snug" : "truncate", activeTab === 'prayers' && item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
                             {item.accepted_jesus && (
                               <span className="shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] text-[10px] font-bold rounded uppercase tracking-wider">Aceitou Jesus</span>
                             )}
-                            {item.prayer_done && (
+                            {activeTab === 'registrations' && item.accepted_jesus === false && item.attends_church === false && (
+                              <span className="shrink-0 px-3 py-1 bg-cyan-400/15 text-cyan-300 text-[11px] font-bold rounded-md uppercase tracking-wider border border-cyan-300/30 flex items-center gap-1.5">
+                                <UserPlus size={12} /> Conhecendo Jesus
+                              </span>
+                            )}
+                            {activeTab === 'registrations' && hasNoBible(item) && (
+                              <span className="shrink-0 px-3 py-1 bg-amber-400/15 text-amber-300 text-[11px] font-bold rounded-md uppercase tracking-wider border border-amber-300/30 flex items-center gap-1.5">
+                                <BookOpen size={12} /> Sem Bíblia
+                              </span>
+                            )}
+                            {activeTab === 'prayers' && item.prayer_done && (
                               <span className="shrink-0 px-2 py-0.5 bg-green-500/10 text-green-500 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1"><Check size={10} /> Concluído</span>
                             )}
                             {/* Status badge CRM */}
@@ -1085,7 +1295,7 @@ export default function AdminPanel() {
                           </div>
                           <p className="text-gray-500 text-sm">
                             {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? (
-                              <span className={cn("flex flex-col gap-1", item.prayer_done && "opacity-50")}>
+                              <span className={cn("flex flex-col gap-1", activeTab === 'prayers' && item.prayer_done && "opacity-50")}>
                                 <span className="flex items-center gap-2 flex-wrap">
                                   {item.whatsapp}
                                   {item.prayer_request && activeTab === 'registrations' && <span className="text-blue-400 text-xs italic flex items-center gap-1 shrink-0">• <MessageCircle size={10} /> Tem pedido de oração</span>}
@@ -1139,8 +1349,23 @@ export default function AdminPanel() {
                                   <Check size={20} />
                                 </button>
                               )}
+                              {activeTab === 'registrations' && filterRegistrations === 'noBible' && hasNoBible(item) && (
+                                <button
+                                  onClick={() => toggleBibleDeliveredStatus(item.id)}
+                                  className="p-2 rounded-lg transition-all bg-amber-400/15 text-amber-300 hover:bg-amber-400 hover:text-black border border-amber-300/30"
+                                  title="Marcar Bíblia entregue"
+                                >
+                                  <Check size={20} />
+                                </button>
+                              )}
                               <button 
-                                onClick={() => { setSelectedRegistration(item); setEditingStatus(item.status || 'novo'); setEditingNotes(item.admin_notes || ''); }}
+                                onClick={() => {
+                                  const parsed = parseAdminNotes(item.admin_notes);
+                                  setSelectedRegistration(item);
+                                  setEditingStatus(item.status || 'novo');
+                                  setEditingOwner(parsed.owner);
+                                  setEditingNotes(parsed.notes);
+                                }}
                                 className="p-2 bg-white/5 text-white rounded-lg hover:bg-white/10 transition-all border border-white/5"
                                 title="Ver Detalhes Completos"
                               >
@@ -1253,7 +1478,7 @@ export default function AdminPanel() {
                   <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
 
                     {/* === CRM: Status + Notas === */}
-                    {(activeTab === 'registrations' || activeTab === 'volunteers') && (
+                    {(activeTab === 'registrations' || activeTab === 'volunteers' || activeTab === 'crm_pipeline') && (
                       <div className="space-y-4 p-5 bg-urban-black rounded-2xl border border-white/10">
                         <h4 className="text-white font-display text-lg tracking-widest uppercase">Acompanhamento</h4>
                         <div>
@@ -1273,6 +1498,16 @@ export default function AdminPanel() {
                               </button>
                             ))}
                           </div>
+                        </div>
+                        <div>
+                          <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Quem está acompanhando / falando com a pessoa</label>
+                          <input
+                            type="text"
+                            value={editingOwner}
+                            onChange={e => setEditingOwner(e.target.value)}
+                            placeholder="Ex: Ana (WhatsApp) / João (Ligação)"
+                            className="w-full bg-urban-gray border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none font-urban text-sm"
+                          />
                         </div>
                         <div>
                           <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Nota interna da equipe</label>
@@ -1355,7 +1590,7 @@ export default function AdminPanel() {
                           <DetailItem icon={<Mail className="text-blue-400" />} label="E-mail" value={selectedRegistration.email || 'Não informado'} isCopy={!!selectedRegistration.email} />
                           <DetailItem icon={<MapPin className="text-red-400" />} label="Cidade / Bairro" value={`${selectedRegistration.city || 'Não informado'} / ${selectedRegistration.neighborhood || ''}`} />
                           <DetailItem icon={<Users className="text-blue-500" />} label="Frequenta Igreja?" value={selectedRegistration.attends_church ? "Sim, frequenta" : "Não frequenta"} />
-                          <DetailItem icon={<div className="font-bold text-xs">📖</div>} label="Contato com a Bíblia?" value={selectedRegistration.has_bible ? "Sim, tem Bíblia" : "Não tem Bíblia"} />
+                          <DetailItem icon={<div className="font-bold text-xs">📖</div>} label="Contato com a Bíblia?" value={hasNoBible(selectedRegistration) ? "Não tem Bíblia" : "Sim, tem Bíblia"} />
                           <DetailItem icon={<Calendar className="text-urban-yellow" />} label="Data do Cadastro" value={formatDate(selectedRegistration.created_at)} />
                         </div>
                         
