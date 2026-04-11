@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBasket, MapPin, Calendar, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
+import { MapPin, Calendar, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
 import { supabase } from '../supabase';
 import { VolunteerModal } from './VolunteerModal';
 import donationImage7 from '../../imagens/7.png';
@@ -70,10 +70,6 @@ const FoodDonation = () => {
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24 items-center">
           <div>
-            <div className="flex items-center gap-2 text-urban-yellow mb-4">
-              <ShoppingBasket size={24} />
-              <span className="font-urban font-bold text-sm tracking-widest uppercase">Ação Social / Arrecadação</span>
-            </div>
             <h1 className="font-display text-6xl md:text-7xl text-white mb-6 leading-none">AJUDE QUEM <br /><span className="text-urban-yellow">PRECISA</span></h1>
             <p className="font-urban text-gray-400 text-lg mb-8 leading-relaxed">
               O SALVE é pra Jesus também é sobre amar o próximo de forma tangível. Durante nossos cultos a céu aberto, unimos forças para levar mantimentos e estender a mão para famílias em situação de vulnerabilidade.
