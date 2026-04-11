@@ -64,8 +64,8 @@ function App() {
             <Route path="/admin" element={<AdminPanel />} />
           </Routes>
         </main>
-        <footer className="bg-urban-gray py-12 border-t border-white/5 text-center px-4">
-          <div className="max-w-7xl mx-auto">
+        <footer className="bg-urban-gray pt-12 border-t border-white/5 text-center">
+          <div className="max-w-7xl mx-auto px-4">
             <h3 className="font-display text-3xl text-white mb-4 tracking-wider">O SALVE <span className="text-urban-yellow">É PRA JESUS</span></h3>
             <p className="font-urban text-gray-500 text-sm mb-6">
               "Ide por todo o mundo, pregai o evangelho a toda criatura." <br />

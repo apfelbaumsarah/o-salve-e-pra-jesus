@@ -109,6 +109,7 @@ const FoodDonation = () => {
         
         {/* Nova Seção de Categorias de Impacto */}
         <div className="mb-24">
+          <p className="font-urban text-xs uppercase tracking-[0.22em] text-gray-500 mb-2 text-center">Possibilidades de Doação</p>
           <h2 className="font-display text-4xl md:text-5xl text-white mb-12 text-center tracking-tight">O QUE COMPÕE A <span className="text-urban-yellow">NOSSA MESA?</span></h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categories.map((cat, index) => (
@@ -118,7 +119,7 @@ const FoodDonation = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-urban-gray/50 p-8 rounded-[2rem] border border-white/5 hover:border-urban-yellow/50 transition-colors flex flex-col"
+                className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-8 rounded-[2rem] border border-white/10 hover:border-urban-yellow/40 transition-colors flex flex-col"
               >
                 {cat.icon}
                 <h3 className="font-display text-3xl text-white mb-4 tracking-wide">{cat.title}</h3>
@@ -127,7 +128,7 @@ const FoodDonation = () => {
                 </p>
                 <div className="flex flex-wrap gap-2 mt-auto">
                   {cat.tags.map(tag => (
-                    <span key={tag} className="text-xs font-bold font-urban uppercase px-3 py-1 bg-white/5 text-gray-300 rounded-full border border-white/10">
+                    <span key={tag} className="text-xs font-bold font-urban uppercase px-3 py-1 bg-black/25 text-gray-300 rounded-full border border-white/10">
                       {tag}
                     </span>
                   ))}

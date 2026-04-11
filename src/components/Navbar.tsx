@@ -50,8 +50,8 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-urban-black/80 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 md:h-24">
-          <Link to="/" className="flex items-center gap-2 shrink-0 w-[120px] md:w-[170px]">
-            <img src={bannerImage3} alt={siteName} className="h-20 md:h-24 w-full object-contain brightness-0 invert" />
+          <Link to="/" className="flex items-center shrink-0 w-[120px] md:w-[170px]">
+            <img src={bannerImage3} alt={siteName} className="h-20 md:h-24 w-full object-contain object-left brightness-0 invert" />
           </Link>
 
           <div className="hidden md:flex items-center gap-6">

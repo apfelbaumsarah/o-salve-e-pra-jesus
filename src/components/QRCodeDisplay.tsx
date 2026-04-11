@@ -38,14 +38,15 @@ export default function QRCodeDisplay() {
           <ArrowLeft size={20} /> VOLTAR PARA O INÍCIO
         </Link>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="street-card p-10 rounded-3xl border-t-8 border-t-urban-yellow text-center"
+            className="bg-urban-gray/80 p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden text-center"
           >
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
             <div className="flex justify-center mb-8">
-              <div className="p-4 bg-urban-yellow/10 rounded-2xl text-urban-yellow">
+              <div className="p-4 bg-urban-yellow/10 rounded-2xl border border-urban-yellow/20 text-urban-yellow">
                 <QrCode size={48} />
               </div>
             </div>
@@ -72,15 +73,15 @@ export default function QRCodeDisplay() {
               </button>
               <button 
                 onClick={() => window.open(appUrl, '_blank')}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-urban-gray border border-white/10 text-white rounded-xl font-bold hover:bg-white/5 transition-all"
+                className="w-full flex items-center justify-center gap-2 py-4 bg-black/30 border border-white/10 text-white rounded-xl font-bold hover:bg-white/5 transition-all"
               >
                 <ExternalLink size={20} /> TESTAR LINK
               </button>
             </div>
           </motion.div>
 
-          <div className="space-y-8">
-            <div className="street-card p-8 rounded-2xl border-l-4 border-l-urban-yellow">
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-7">
               <h3 className="font-display text-3xl text-white mb-2">ONDE USAR?</h3>
               <p className="font-urban text-gray-400 text-sm">
                 Imprima em banners, telões, panfletos ou crachás dos voluntários. 
@@ -88,7 +89,7 @@ export default function QRCodeDisplay() {
               </p>
             </div>
 
-            <div className="street-card p-8 rounded-2xl border-l-4 border-l-urban-yellow">
+            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-7">
               <h3 className="font-display text-3xl text-white mb-2">DICA DE OURO</h3>
               <p className="font-urban text-gray-400 text-sm">
                 Peça para os ministradores avisarem no microfone sobre o QR Code na hora do apelo. 
@@ -96,7 +97,7 @@ export default function QRCodeDisplay() {
               </p>
             </div>
 
-            <div className="bg-urban-gray p-6 rounded-2xl border border-white/5">
+            <div className="bg-black/30 p-6 rounded-2xl border border-white/10">
               <p className="text-xs text-gray-500 font-urban uppercase mb-2">LINK DIRETO:</p>
               <code className="text-xs text-urban-yellow font-mono break-all">
                 {appUrl}

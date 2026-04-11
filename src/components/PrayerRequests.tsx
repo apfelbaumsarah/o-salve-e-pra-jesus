@@ -40,9 +40,10 @@ const PrayerRequests = () => {
           <ArrowLeft size={20} /> VOLTAR PARA O INÍCIO
         </Link>
 
-        <div className="street-card p-10 rounded-3xl border-t-8 border-t-urban-yellow">
+        <div className="bg-urban-gray/80 p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
           <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 bg-urban-yellow/10 rounded-2xl text-urban-yellow">
+            <div className="p-4 bg-urban-yellow/10 rounded-2xl border border-urban-yellow/20 text-urban-yellow">
               <Heart size={40} fill="currentColor" />
             </div>
             <div>
@@ -67,7 +68,7 @@ const PrayerRequests = () => {
                 </p>
                 <button
                   onClick={() => setIsSuccess(false)}
-                  className="px-8 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-colors"
+                  className="px-8 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-colors street-border"
                 >
                   ENVIAR OUTRO PEDIDO
                 </button>
@@ -86,7 +87,7 @@ const PrayerRequests = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none"
                     placeholder="Como você se chama?"
                   />
                 </div>
@@ -97,7 +98,7 @@ const PrayerRequests = () => {
                     rows={6}
                     value={formData.request}
                     onChange={(e) => setFormData({ ...formData, request: e.target.value })}
-                    className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none resize-none"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none resize-none"
                     placeholder="Conte-nos pelo que você precisa de oração..."
                   />
                 </div>

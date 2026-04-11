@@ -64,50 +64,50 @@ const Volunteers = () => {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-5">
-              <div className="rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/10 via-cyan-300/5 to-transparent p-6 md:p-7">
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-6 md:p-7">
                 <div className="mb-5">
-                  <span className="inline-flex px-3 py-1 rounded-full border border-cyan-300/25 text-[11px] tracking-[0.2em] uppercase font-urban text-cyan-200/80 mb-3">Frente 01</span>
-                  <h4 className="font-display text-2xl tracking-wide text-cyan-100">DOAÇÕES EXTRAS</h4>
+                  <span className="inline-flex px-3 py-1 rounded-full border border-urban-yellow/30 text-[11px] tracking-[0.2em] uppercase font-urban text-urban-yellow mb-3">Frente 01</span>
+                  <h4 className="font-display text-2xl tracking-wide text-white">DOAÇÕES EXTRAS</h4>
                 </div>
                 <p className="font-urban text-gray-300 mb-4 text-sm leading-relaxed">
                   Sabe aquelas peças que já não contam mais a sua história, mas podem aquecer a de alguém nas ruas e favelas? Aceitamos:
                 </p>
                 <ul className="grid grid-cols-1 gap-3 text-sm text-gray-200 font-urban">
-                  <li className="border border-cyan-200/20 bg-black/25 px-4 py-3 rounded-xl">Roupas em bom estado</li>
-                  <li className="border border-cyan-200/20 bg-black/25 px-4 py-3 rounded-xl">Calçados higienizados</li>
-                  <li className="border border-cyan-200/20 bg-black/25 px-4 py-3 rounded-xl">Cobertores e agasalhos</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Roupas em bom estado</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Calçados higienizados</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Cobertores e agasalhos</li>
                 </ul>
               </div>
 
-              <div className="rounded-3xl border border-violet-300/20 bg-gradient-to-br from-violet-400/10 via-violet-300/5 to-transparent p-6 md:p-7">
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-6 md:p-7">
                 <div className="mb-5">
-                  <span className="inline-flex px-3 py-1 rounded-full border border-violet-300/25 text-[11px] tracking-[0.2em] uppercase font-urban text-violet-200/80 mb-3">Frente 02</span>
-                  <h4 className="font-display text-2xl tracking-wide text-violet-100">SEUS TALENTOS CURAM</h4>
+                  <span className="inline-flex px-3 py-1 rounded-full border border-urban-yellow/30 text-[11px] tracking-[0.2em] uppercase font-urban text-urban-yellow mb-3">Frente 02</span>
+                  <h4 className="font-display text-2xl tracking-wide text-white">SEUS TALENTOS CURAM</h4>
                 </div>
                 <p className="font-urban text-gray-300 mb-4 text-sm leading-relaxed">
                   Mais do que serviços, o que transforma vidas é presença, escuta e cuidado genuíno. Se você tem um dom para compartilhar, independente de qual é, há espaço aqui:
                 </p>
                 <ul className="grid grid-cols-1 gap-3 text-sm text-gray-200 font-urban">
-                  <li className="border border-violet-200/20 bg-black/25 px-4 py-3 rounded-xl">Escuta e Acolhimento</li>
-                  <li className="border border-violet-200/20 bg-black/25 px-4 py-3 rounded-xl">Psicologia / Aconselhamento</li>
-                  <li className="border border-violet-200/20 bg-black/25 px-4 py-3 rounded-xl">Educação e Reforço</li>
-                  <li className="border border-violet-200/20 bg-black/25 px-4 py-3 rounded-xl">Cabelo e Barba</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Escuta e Acolhimento</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Psicologia / Aconselhamento</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Educação e Reforço</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Cabelo e Barba</li>
                 </ul>
               </div>
 
-              <div className="rounded-3xl border border-emerald-300/20 bg-gradient-to-br from-emerald-400/10 via-emerald-300/5 to-transparent p-6 md:p-7 lg:col-span-2">
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-6 md:p-7 lg:col-span-2">
                 <div className="mb-5">
-                  <span className="inline-flex px-3 py-1 rounded-full border border-emerald-300/25 text-[11px] tracking-[0.2em] uppercase font-urban text-emerald-200/80 mb-3">Frente 03</span>
-                  <h4 className="font-display text-2xl tracking-wide text-emerald-100">FAZER PARTE DO MOVIMENTO</h4>
+                  <span className="inline-flex px-3 py-1 rounded-full border border-urban-yellow/30 text-[11px] tracking-[0.2em] uppercase font-urban text-urban-yellow mb-3">Frente 03</span>
+                  <h4 className="font-display text-2xl tracking-wide text-white">FAZER PARTE DO MOVIMENTO</h4>
                 </div>
                 <p className="font-urban text-gray-300 mb-4 text-sm leading-relaxed">
                   A SALVE se sustenta por pessoas que decidiram dizer sim. Se você quer contribuir para que mais ações como essa aconteçam, há espaço pra você:
                 </p>
                 <ul className="grid md:grid-cols-2 gap-3 text-sm text-gray-200 font-urban">
-                  <li className="border border-emerald-200/20 bg-black/25 px-4 py-3 rounded-xl">Divulgar o evento e ampliar o alcance nas redes</li>
-                  <li className="border border-emerald-200/20 bg-black/25 px-4 py-3 rounded-xl">Ajudar na recepção e acolhimento do público no dia</li>
-                  <li className="border border-emerald-200/20 bg-black/25 px-4 py-3 rounded-xl">Apoiar na logística, transporte e montagem do espaço</li>
-                  <li className="border border-emerald-200/20 bg-black/25 px-4 py-3 rounded-xl">Contribuir financeiramente para as próximas edições</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Divulgar o evento e ampliar o alcance nas redes</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Ajudar na recepção e acolhimento do público no dia</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Apoiar na logística, transporte e montagem do espaço</li>
+                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Contribuir financeiramente para as próximas edições</li>
                 </ul>
               </div>
             </div>
