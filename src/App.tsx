@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Instagram, Facebook, Youtube } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
@@ -12,6 +12,16 @@ import FoodDonation from './components/FoodDonation';
 import AboutTheSalve from './components/AboutTheSalve';
 import Volunteers from './components/Volunteers';
 import { supabase } from './supabase';
+
+function ScrollToTopOnRouteChange() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+}
 
 function App() {
   useEffect(() => {
@@ -47,6 +57,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTopOnRouteChange />
       <div className="min-h-screen bg-urban-black flex flex-col">
         <Navbar />
         <main className="flex-grow">
