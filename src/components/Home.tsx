@@ -22,6 +22,14 @@ interface Event {
   description: string;
 }
 
+const SCHEDULED_EVENT: Event = {
+  id: 'evento-fixo-2026-04-21-14h',
+  title: 'SALVE PRA JESUS',
+  date: '2026-04-21T14:00:00-03:00',
+  location: 'Concha Acústica Taquaral - Portão 2\nAv. Dr. Heitor Penteado, 1671 - Parque Taquaral, Campinas - SP, 13087-000',
+  description: ''
+};
+
 const Home = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -29,6 +37,29 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let metaDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.name = 'description';
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.content = 'Canal oficial Salve pra Jesus. Eventos, registros e conexão para a nova geração.';
+  }, []);
+
+  useEffect(() => {
+    const withScheduledEvent = (incomingEvents: Event[]) => {
+      const alreadyHasScheduled = incomingEvents.some(
+        (event) =>
+          event.title === SCHEDULED_EVENT.title &&
+          event.location === SCHEDULED_EVENT.location &&
+          event.date === SCHEDULED_EVENT.date
+      );
+      const mergedEvents = alreadyHasScheduled
+        ? incomingEvents
+        : [SCHEDULED_EVENT, ...incomingEvents];
+      return mergedEvents.slice(0, 3);
+    };
+
     const fetchData = async () => {
       const { data: bannersData } = await supabase
         .from('banners')
@@ -42,7 +73,7 @@ const Home = () => {
         .select('*')
         .order('date', { ascending: true })
         .limit(3);
-      setEvents(eventsData || []);
+      setEvents(withScheduledEvent(eventsData || []));
       setLoading(false);
     };
     fetchData();
@@ -59,7 +90,7 @@ const Home = () => {
       .channel('home-events')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, async () => {
         const { data } = await supabase.from('events').select('*').order('date', { ascending: true }).limit(3);
-        setEvents(data || []);
+        setEvents(withScheduledEvent(data || []));
       })
       .subscribe();
 
@@ -108,14 +139,14 @@ const Home = () => {
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
-                <motion.h1
+                <motion.h2
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
                   className="font-display text-4xl md:text-7xl text-white mb-2 tracking-tighter drop-shadow-2xl"
                 >
                   {banners[currentBanner].title}
-                </motion.h1>
+                </motion.h2>
                 <motion.p
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -154,14 +185,28 @@ const Home = () => {
         )}
       </section>
 
+      <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+        <div className="py-2">
+          <h1 className="font-display text-4xl md:text-6xl text-urban-yellow tracking-tight mb-4">
+            O MOVIMENTO É REAL.
+          </h1>
+          <p className="font-urban text-gray-300 text-base md:text-xl leading-relaxed max-w-3xl">
+            Não é sobre um dia, é sobre o que fica depois que as luzes apagam. O Salve pra Jesus surgiu para ser voz em meio ao barulho. Uma geração, um propósito e a mesma verdade, falada do nosso jeito.
+            <br />
+            <br />
+            Aqui você vê como tudo começou e para onde estamos indo.
+          </p>
+        </div>
+      </section>
+
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
           <div>
             <h2 className="font-display text-5xl text-white mb-2">PRÓXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
             <p className="font-urban text-gray-400">Não perca o que Deus está fazendo em nossa cidade.</p>
           </div>
-          <Link to="/ao-vivo" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
-            VER PROGRAMAÇÃO COMPLETA <ArrowRight size={20} />
+          <Link to="/cadastro" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
+            CONFIRMAR PRESENÇA <ArrowRight size={20} />
           </Link>
         </div>
 
@@ -176,21 +221,17 @@ const Home = () => {
                 <div className="flex items-center gap-2 text-urban-yellow mb-4">
                   <Calendar size={18} />
                   <span className="font-urban font-bold text-sm uppercase">
-                    {event.date ? format(new Date(event.date), "dd 'de' MMMM", { locale: ptBR }) : 'Data em breve'}
+                    {event.date ? format(new Date(event.date), "dd 'de' MMMM '•' HH'h'", { locale: ptBR }) : 'Data em breve'}
                   </span>
                 </div>
                 <h3 className="font-display text-3xl text-white mb-3">{event.title}</h3>
                 <div className="flex items-start gap-2 text-gray-400 mb-6">
                   <MapPin size={18} className="shrink-0 mt-1" />
-                  <span className="text-sm">{event.location}</span>
+                  <span className="text-sm whitespace-pre-line">{event.location}</span>
                 </div>
-                <p className="text-gray-500 text-sm mb-6 line-clamp-3">{event.description}</p>
-                <Link
-                  to="/cadastro"
-                  className="inline-block w-full text-center py-3 bg-urban-yellow text-urban-black font-bold rounded-lg hover:bg-yellow-600 transition-colors"
-                >
-                  QUERO PARTICIPAR
-                </Link>
+                {event.description && (
+                  <p className="text-gray-500 text-sm mb-6 line-clamp-3">{event.description}</p>
+                )}
               </motion.div>
             ))
           ) : (
