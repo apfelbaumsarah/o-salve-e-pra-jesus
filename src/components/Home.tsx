@@ -196,6 +196,9 @@ const Home = () => {
             <br />
             Aqui você vê como tudo começou e para onde estamos indo.
           </p>
+          <Link to="/historia" className="inline-flex items-center gap-2 text-urban-yellow font-bold hover:underline mt-8">
+            CONHECER A HISTÓRIA <ArrowRight size={20} />
+          </Link>
         </div>
       </section>
 
@@ -205,9 +208,6 @@ const Home = () => {
             <h2 className="font-display text-5xl text-white mb-2">PRÓXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
             <p className="font-urban text-gray-400">Não perca o que Deus está fazendo em nossa cidade.</p>
           </div>
-          <Link to="/historia" className="flex items-center gap-2 text-urban-yellow font-bold hover:underline">
-            CONHECER A HISTÓRIA <ArrowRight size={20} />
-          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
