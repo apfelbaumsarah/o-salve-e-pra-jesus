@@ -11,6 +11,7 @@ import PrayerRequests from './components/PrayerRequests';
 import FoodDonation from './components/FoodDonation';
 import AboutTheSalve from './components/AboutTheSalve';
 import Volunteers from './components/Volunteers';
+import VolunteerSignup from './components/VolunteerSignup';
 import { supabase } from './supabase';
 
 function ScrollToTopOnRouteChange() {
@@ -67,6 +68,7 @@ function App() {
             <Route path="/ao-vivo" element={<LiveStream />} />
             <Route path="/oracao" element={<PrayerRequests />} />
             <Route path="/voluntarios" element={<Volunteers />} />
+            <Route path="/quero-servir" element={<VolunteerSignup />} />
             <Route path="/arrecadacao" element={<FoodDonation />} />
             <Route path="/qrcode" element={<QRCodeDisplay />} />
             <Route path="/historia" element={<AboutTheSalve />} />
