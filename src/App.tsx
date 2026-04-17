@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { Instagram, Facebook, Youtube } from 'lucide-react';
+import { Instagram, Youtube } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
 import RegistrationForm from './components/RegistrationForm';
@@ -86,10 +86,7 @@ function App() {
               <a href="https://www.instagram.com/salveprajesus" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-urban-yellow hover:bg-urban-yellow/10 transition-all">
                 <Instagram size={24} />
               </a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all">
-                <Facebook size={24} />
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
+              <a href="https://www.youtube.com/@salveprajesus" target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 border border-white/10 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
                 <Youtube size={24} />
               </a>
             </div>
