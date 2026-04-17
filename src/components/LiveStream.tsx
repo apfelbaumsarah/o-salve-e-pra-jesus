@@ -17,6 +17,8 @@ const LiveStream = () => {
   const [lives, setLives] = useState<Live[]>([]);
   const [mainLive, setMainLive] = useState<Live | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   useEffect(() => {
     const fetchLives = async () => {
@@ -47,15 +49,44 @@ const LiveStream = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleShare = () => {
-    if (mainLive) {
-      const url = `https://www.youtube.com/watch?v=${mainLive.youtube_id}`;
-      if (navigator.share) {
-        navigator.share({ title: mainLive.title, url });
-      } else {
-        navigator.clipboard.writeText(url);
+  const getShareData = () => {
+    if (!mainLive) return null;
+    const url = `https://www.youtube.com/watch?v=${mainLive.youtube_id}`;
+    const text = `Assista "${mainLive.title}" no canal O SALVE é pra JESUS: ${url}`;
+    return { url, text, title: mainLive.title };
+  };
+
+  const copyShareText = async () => {
+    const shareData = getShareData();
+    if (!shareData) return;
+
+    try {
+      await navigator.clipboard.writeText(shareData.text);
+      setCopiedFeedback(true);
+      setTimeout(() => setCopiedFeedback(false), 2500);
+    } catch {
+      setCopiedFeedback(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = getShareData();
+    if (!shareData) return;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
+        });
+        return;
+      } catch {
+        // If user cancels native share, keep fallback menu available.
       }
     }
+
+    setIsShareMenuOpen((prev) => !prev);
   };
 
   if (loading) {
@@ -77,12 +108,55 @@ const LiveStream = () => {
             </div>
             <h1 className="font-display text-6xl text-white">ASSISTA <span className="text-urban-yellow">O SALVE</span></h1>
           </div>
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-2 px-6 py-3 bg-urban-gray border border-white/10 rounded-xl text-white font-bold hover:bg-white/5 transition-colors"
-          >
-            <Share2 size={20} /> COMPARTILHAR TRANSMISSÃO
-          </button>
+          <div className="relative w-full md:w-auto">
+            <button
+              onClick={handleShare}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-urban-gray border border-white/10 rounded-xl text-white font-bold hover:bg-white/5 transition-colors"
+            >
+              <Share2 size={20} /> COMPARTILHAR TRANSMISSÃO
+            </button>
+
+            {isShareMenuOpen && mainLive && (
+              <div className="mt-3 md:mt-2 md:absolute md:right-0 z-30 p-3 bg-urban-gray border border-white/10 rounded-xl shadow-2xl min-w-[280px]">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Assista "${mainLive.title}" no canal O SALVE é pra JESUS: https://www.youtube.com/watch?v=${mainLive.youtube_id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
+                  >
+                    WhatsApp
+                  </a>
+                  <a
+                    href={`sms:?&body=${encodeURIComponent(`Assista "${mainLive.title}" no canal O SALVE é pra JESUS: https://www.youtube.com/watch?v=${mainLive.youtube_id}`)}`}
+                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
+                  >
+                    SMS
+                  </a>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await copyShareText();
+                      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+                    }}
+                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
+                  >
+                    Instagram
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyShareText}
+                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
+                  >
+                    Copiar
+                  </button>
+                </div>
+                {copiedFeedback && (
+                  <p className="text-xs text-urban-yellow mt-2 text-center">Link copiado para compartilhar.</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20">
@@ -124,7 +198,7 @@ const LiveStream = () => {
                 Acompanhe ao vivo e interaja conosco através do chat oficial no YouTube.
               </p>
               <a
-                href="https://youtube.com"
+                href="https://www.youtube.com/@salveprajesus"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-colors"

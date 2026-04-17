@@ -107,7 +107,6 @@ const Volunteers = () => {
                   <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Divulgar o evento e ampliar o alcance nas redes</li>
                   <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Ajudar na recepção e acolhimento do público no dia</li>
                   <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Apoiar na logística, transporte e montagem do espaço</li>
-                  <li className="border border-white/10 bg-black/25 px-4 py-3 rounded-xl hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-colors">Contribuir financeiramente para as próximas edições</li>
                 </ul>
               </div>
             </div>

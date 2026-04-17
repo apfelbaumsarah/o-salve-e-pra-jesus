@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Send, CheckCircle } from 'lucide-react';
+import { Send, CheckCircle } from 'lucide-react';
 
 const PrayerRequests = () => {
   const [formData, setFormData] = useState({ name: '', request: '' });
@@ -37,14 +37,9 @@ const PrayerRequests = () => {
       <div className="max-w-3xl mx-auto">
         <div className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 bg-urban-yellow/10 rounded-2xl border border-urban-yellow/20 text-urban-yellow">
-              <Heart size={40} fill="currentColor" />
-            </div>
-            <div>
-              <h1 className="font-display text-5xl text-white">PEDIDO DE <span className="text-urban-yellow">ORAÇÃO</span></h1>
-              <p className="font-urban text-gray-400">Nossa equipe de intercessão estará orando por você.</p>
-            </div>
+          <div className="mb-8">
+            <h1 className="font-display text-5xl text-white">PEDIDO DE <span className="text-urban-yellow">ORAÇÃO</span></h1>
+            <p className="font-urban text-gray-400">Nossa equipe de intercessão estará orando por você.</p>
           </div>
 
           <AnimatePresence mode="wait">
