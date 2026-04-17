@@ -112,13 +112,19 @@ const Volunteers = () => {
               </div>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-white/10">
+            <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
+              <p className="font-urban text-sm text-gray-300 leading-relaxed">
+                A SALVE é uma iniciativa totalmente de pessoas. Não há empresa por trás, patrocínio fixo ou estrutura comercial:
+                cada edição só acontece porque voluntários e apoiadores decidiram construir isso juntos.
+              </p>
+              <div className="flex flex-col md:flex-row gap-3">
               <button
                 onClick={() => setIsVolunteerModalOpen(true)}
                 className="px-8 py-4 bg-urban-yellow text-urban-black border-2 border-urban-yellow font-bold uppercase tracking-wider rounded-xl hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban street-border"
               >
                 QUERO CAMINHAR COM A SALVE
               </button>
+              </div>
             </div>
           </motion.div>
         </div>

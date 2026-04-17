@@ -37,7 +37,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && request.auth.token.email != null &&
         (exists(/databases/$(database)/documents/team/$(request.auth.token.email)) ||
-         (request.auth.token.email == "sarahb.contato@gmail.com" && request.auth.token.email_verified == true));
+         (request.auth.token.email == "contato@salveprajesus.org" && request.auth.token.email_verified == true));
     }
 
     function isValidEmail(email) {

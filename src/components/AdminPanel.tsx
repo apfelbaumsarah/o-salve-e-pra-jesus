@@ -20,7 +20,8 @@ const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'p
 
 
 export default function AdminPanel() {
-  const MAIN_ADMIN_EMAIL = 'sarahb.contato@gmail.com';
+  const MAIN_ADMIN_EMAIL = 'contato@salveprajesus.org';
+  const LEGACY_BLOCKED_EMAIL = 'sarahb.contato@gmail.com';
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -88,8 +89,26 @@ export default function AdminPanel() {
         setIsCheckingAccess(false);
         return;
       }
-      
-      setHasAccess(true);
+
+      if (user.email === LEGACY_BLOCKED_EMAIL) {
+        setHasAccess(false);
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      if (user.email === MAIN_ADMIN_EMAIL) {
+        setHasAccess(true);
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      const { data: teamMember } = await supabase
+        .from('team')
+        .select('email, active')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      setHasAccess(Boolean(teamMember) && teamMember.active !== false);
       setIsCheckingAccess(false);
     };
 
@@ -563,7 +582,7 @@ export default function AdminPanel() {
     contatado:         { label: 'Contatado',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/20', dot: 'bg-urban-yellow' },
     acompanhamento:    { label: 'Em Acompanhamento', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20', dot: 'bg-purple-400' },
     sem_biblia:        { label: 'Sem Bíblia',        color: 'bg-amber-400/10 text-amber-300 border-amber-400/20', dot: 'bg-amber-300' },
-    concluido:         { label: 'Concluído',         color: 'bg-green-500/10 text-green-400 border-green-500/20',  dot: 'bg-green-400' },
+    concluido:         { label: 'Concluído',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/30 shadow-[0_0_12px_rgba(206,189,103,0.25)]',  dot: 'bg-urban-yellow' },
   };
 
   const getStatus = (item: any) => item.status || 'novo';

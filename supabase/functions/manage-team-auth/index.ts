@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') as string;
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-    const mainAdminEmail = Deno.env.get('MAIN_ADMIN_EMAIL') || 'sarahb.contato@gmail.com';
+    const mainAdminEmail = Deno.env.get('MAIN_ADMIN_EMAIL') || 'contato@salveprajesus.org';
     const authHeader = req.headers.get('Authorization') || '';
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
