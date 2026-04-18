@@ -125,7 +125,7 @@ const LiveStream = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
           <div className="mt-8 md:mt-10">
             <p className="font-urban font-bold text-sm tracking-widest uppercase text-urban-yellow mb-2">
-              Mensagens e videos
+              Mensagens e vídeos
             </p>
             <h1 className="font-display text-6xl text-white">ASSISTA <span className="text-urban-yellow">O SALVE</span></h1>
           </div>

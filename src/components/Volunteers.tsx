@@ -22,7 +22,7 @@ const Volunteers = () => {
           >
             <div className="text-left">
               <p className="font-urban font-bold text-sm tracking-widest uppercase text-urban-yellow mt-8 md:mt-10 mb-2">
-                Chamado ao servico
+                Chamado ao serviço
               </p>
               <h1 className="font-display text-5xl md:text-6xl text-white mb-6 tracking-tight">
                 A MESA É <span className="text-urban-yellow">GRANDE</span>

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import fallbackBannerImage from '../../imagens/8.jpg.jpeg';
 
 interface Banner {
   id: string;
@@ -119,7 +120,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-urban-black pt-16">
-      <section className="relative h-[40vh] md:h-[50vh] overflow-hidden border-b-[8px] border-urban-yellow">
+      <section className={`relative overflow-hidden ${banners.length > 0 ? 'h-[40vh] md:h-[50vh]' : 'aspect-[16/9] md:aspect-[8/3]'}`}>
         <AnimatePresence mode="wait">
           {banners.length > 0 ? (
             <motion.div
@@ -158,11 +159,13 @@ const Home = () => {
               </div>
             </motion.div>
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-urban-gray">
-              <div className="text-center">
-                <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE É PRA JESUS</h1>
-                <p className="font-urban text-gray-400">EM BREVE NOVIDADES</p>
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center bg-urban-black">
+              <img
+                src={fallbackBannerImage}
+                alt="O SALVE É PRA JESUS"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-urban-black to-transparent z-10" />
             </div>
           )}
         </AnimatePresence>
