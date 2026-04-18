@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LogOut, LogIn, Users, Heart, Download, Search, Bell, UserPlus,
   Calendar, Phone, Image as ImageIcon, Radio, Plus,
   Trash2, Check, X, Pencil, AlertTriangle,
-  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns
+  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns, ArrowUpRight
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
@@ -47,7 +47,11 @@ export default function AdminPanel() {
   const [teamRows, setTeamRows] = useState<any[]>([]);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
-  
+
+  // Multiple selection state (Cadastros tab)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const masterCheckboxRef = useRef<HTMLInputElement>(null);
+
   // Login States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,6 +64,7 @@ export default function AdminPanel() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isVerifyingDelete, setIsVerifyingDelete] = useState(false);
+  const [dashboardRange, setDashboardRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
 
   const [settings, setSettings] = useState<any>({
     site_name: 'O SALVE É PRA JESUS',
@@ -127,6 +132,26 @@ export default function AdminPanel() {
   useEffect(() => {
     setSearchTerm('');
   }, [activeTab]);
+
+  // Live-preview: inject Google Font into <head> when on settings tab
+  useEffect(() => {
+    if (activeTab !== 'settings') return;
+    const url = settings.google_fonts_url;
+    if (!url) return;
+    let link = document.getElementById('settings-preview-font') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'settings-preview-font';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+    return () => {
+      // Remove only when leaving settings tab
+      const el = document.getElementById('settings-preview-font');
+      if (el) el.remove();
+    };
+  }, [activeTab, settings.google_fonts_url]);
 
   const getTableName = (tab: Tab) => {
     if (tab === 'prayers') return 'registrations';
@@ -280,6 +305,9 @@ export default function AdminPanel() {
       };
     }
   }, [user, activeTab, hasAccess, isMainAdmin]);
+
+  // Clear selection when tab or filter changes
+  useEffect(() => { setSelectedIds(new Set()); }, [activeTab, filterRegistrations]);
 
   // Close sidebar on ESC key (mobile)
   useEffect(() => {
@@ -792,29 +820,37 @@ export default function AdminPanel() {
     );
   }
 
-  const totalCadastros = data.length;
-  const aceitaramJesus = data.filter((d) => d.accepted_jesus === true).length;
-  const frequentamIgreja = data.filter((d) => d.attends_church === true).length;
-  const naoFrequentamIgreja = data.filter((d) => d.attends_church === false).length;
-  const temBiblia = data.filter((d) => d.has_bible === true).length;
-  const naoTemBiblia = data.filter((d) => hasNoBible(d)).length;
-  const aindaConhecendo = data.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
-  const jaCaminha = data.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
+  const rangedData = useMemo(() => {
+    if (dashboardRange === 'all') return data;
+    const now = Date.now();
+    const days = dashboardRange === '7d' ? 7 : dashboardRange === '30d' ? 30 : 90;
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    return data.filter((d: any) => d.created_at && new Date(d.created_at).getTime() >= cutoff);
+  }, [data, dashboardRange]);
+
+  const totalCadastros = rangedData.length;
+  const aceitaramJesus = rangedData.filter((d) => d.accepted_jesus === true).length;
+  const frequentamIgreja = rangedData.filter((d) => d.attends_church === true).length;
+  const naoFrequentamIgreja = rangedData.filter((d) => d.attends_church === false).length;
+  const temBiblia = rangedData.filter((d) => d.has_bible === true).length;
+  const naoTemBiblia = rangedData.filter((d) => hasNoBible(d)).length;
+  const aindaConhecendo = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
+  const jaCaminha = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
 
   const dataJesus = [
     { name: `Aceitaram (${aceitaramJesus})`, value: aceitaramJesus, color: '#FFE81F' },
     { name: `Conhecendo (${aindaConhecendo})`, value: aindaConhecendo, color: '#00FF66' },
-    { name: `Já Cristão/Outros (${jaCaminha})`, value: jaCaminha, color: '#333333' }
+    { name: `Já Cristão/Outros (${jaCaminha})`, value: jaCaminha, color: '#6B7280' }
   ];
 
   const dataIgreja = [
     { name: `Frequenta (${frequentamIgreja})`, value: frequentamIgreja, color: '#00D1FF' },
-    { name: `Não Frequenta (${naoFrequentamIgreja})`, value: naoFrequentamIgreja, color: '#333333' }
+    { name: `Não Frequenta (${naoFrequentamIgreja})`, value: naoFrequentamIgreja, color: '#6B7280' }
   ];
 
   const dataBiblia = [
     { name: `Não Tem (${naoTemBiblia})`, value: naoTemBiblia, color: '#A855F7' },
-    { name: `Tem Bíblia (${temBiblia})`, value: temBiblia, color: '#333333' }
+    { name: `Tem Bíblia (${temBiblia})`, value: temBiblia, color: '#6B7280' }
   ];
   const sourceRows = activeTab === 'team' ? teamRows : data;
   const visibleData = (sourceRows || [])
@@ -1011,20 +1047,102 @@ export default function AdminPanel() {
               </div>
             ) : (
             <div className="space-y-8 animate-in fade-in duration-500">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div 
-                  className="street-card cursor-pointer p-6 rounded-2xl border-l-4 border-urban-yellow hover:scale-[1.05] hover:bg-urban-yellow/5 transition-all shadow-[0_0_15px_rgba(255,232,31,0.1)]"
-                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); }}
-                >
-                  <h3 className="text-gray-400 font-urban text-sm uppercase font-bold text-urban-yellow">Total de Cadastros</h3>
-                  <p className="text-5xl text-white font-display mt-2">{totalCadastros}</p>
-                </div>
+              {/* Time range selector */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {(['7d', '30d', '90d', 'all'] as const).map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setDashboardRange(range)}
+                    className={cn(
+                      'px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all',
+                      dashboardRange === range
+                        ? 'bg-urban-yellow text-urban-black'
+                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    {range === '7d' ? '7 dias' : range === '30d' ? '30 dias' : range === '90d' ? '90 dias' : 'Tudo'}
+                  </button>
+                ))}
+              </div>
+
+              {/* 6-card KPI grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                {/* Total de Cadastros */}
                 <div
-                  className="street-card cursor-pointer p-6 rounded-2xl border-l-4 border-[#00FF66] hover:scale-[1.05] hover:bg-[#00FF66]/5 transition-all shadow-[0_0_15px_rgba(0,255,102,0.1)]"
-                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-urban-yellow hover:scale-[1.04] hover:bg-urban-yellow/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver todos os cadastros"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('all'); } }}
                 >
-                  <h3 className="text-[#00FF66] font-urban text-sm uppercase font-bold">Aceitaram a Jesus</h3>
-                  <p className="text-5xl text-white font-display mt-2">{aceitaramJesus}</p>
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-urban-yellow font-urban text-xs uppercase font-bold mb-1">Total</p>
+                  <p className="text-3xl text-white font-display">{totalCadastros}</p>
+                </div>
+
+                {/* Aceitaram a Jesus */}
+                <div
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-[#00FF66] hover:scale-[1.04] hover:bg-[#00FF66]/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver quem aceitou Jesus"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); } }}
+                >
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-[#00FF66] font-urban text-xs uppercase font-bold mb-1">Aceitaram</p>
+                  <p className="text-3xl text-white font-display">{aceitaramJesus}</p>
+                </div>
+
+                {/* Não Frequentam Igreja */}
+                <div
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-[#00D1FF] hover:scale-[1.04] hover:bg-[#00D1FF]/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver quem não frequenta igreja"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('all'); } }}
+                >
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-[#00D1FF] font-urban text-xs uppercase font-bold mb-1">Sem Igreja</p>
+                  <p className="text-3xl text-white font-display">{naoFrequentamIgreja}</p>
+                </div>
+
+                {/* Sem Bíblia */}
+                <div
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-amber-400 hover:scale-[1.04] hover:bg-amber-400/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('noBible'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver quem não tem Bíblia"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('noBible'); } }}
+                >
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-amber-400 font-urban text-xs uppercase font-bold mb-1">Sem Bíblia</p>
+                  <p className="text-3xl text-white font-display">{naoTemBiblia}</p>
+                </div>
+
+                {/* Ainda Conhecendo */}
+                <div
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-purple-400 hover:scale-[1.04] hover:bg-purple-400/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('knowing'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver quem ainda está conhecendo"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('knowing'); } }}
+                >
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-purple-400 font-urban text-xs uppercase font-bold mb-1">Conhecendo</p>
+                  <p className="text-3xl text-white font-display">{aindaConhecendo}</p>
+                </div>
+
+                {/* Taxa de Conversão */}
+                <div className="street-card relative p-4 rounded-2xl border-l-4 border-gray-500 transition-all">
+                  <p className="text-gray-400 font-urban text-xs uppercase font-bold mb-1">Conversão</p>
+                  <p className="text-3xl text-white font-display">
+                    {totalCadastros > 0 ? ((aceitaramJesus / totalCadastros) * 100).toFixed(1) : '0.0'}%
+                  </p>
                 </div>
               </div>
 
@@ -1035,7 +1153,7 @@ export default function AdminPanel() {
                   <div className="h-56 relative flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={dataJesus} innerRadius={65} outerRadius={70} paddingAngle={8} dataKey="value" stroke="none" cornerRadius={40}>
+                        <Pie data={dataJesus} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
                           {dataJesus.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
                           ))}
@@ -1053,7 +1171,7 @@ export default function AdminPanel() {
                   <div className="h-56 relative flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={dataIgreja} innerRadius={65} outerRadius={70} paddingAngle={8} dataKey="value" stroke="none" cornerRadius={40}>
+                        <Pie data={dataIgreja} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
                           {dataIgreja.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
                           ))}
@@ -1071,7 +1189,7 @@ export default function AdminPanel() {
                   <div className="h-56 relative flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={dataBiblia} innerRadius={65} outerRadius={70} paddingAngle={8} dataKey="value" stroke="none" cornerRadius={40}>
+                        <Pie data={dataBiblia} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
                           {dataBiblia.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
                           ))}
@@ -1199,43 +1317,122 @@ export default function AdminPanel() {
               </div>
             </div>
           ) : activeTab === 'settings' && canViewTab('settings') ? (
-            <motion.form
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              onSubmit={handleSaveSettings}
-              className="street-card p-10 rounded-3xl space-y-8"
+              className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8 items-start"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Input label="Nome do Site" value={settings.site_name} onChange={(v) => setSettings({ ...settings, site_name: v })} />
-                <div>
-                  <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Logo do Site (Upload)</label>
-                  <div className="flex items-center gap-4">
-                    {settings.logo_url && <img src={settings.logo_url} alt="Logo" className="w-12 h-12 object-contain bg-white/5 rounded-lg" />}
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo_url', true)} className="flex-grow bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none" />
+              {/* Form */}
+              <form onSubmit={handleSaveSettings} className="street-card p-10 rounded-3xl space-y-8">
+
+                {/* Secao: Identidade */}
+                <section className="space-y-4">
+                  <div className="border-b border-white/10 pb-2 mb-4">
+                    <h4 className="font-display text-xl text-urban-yellow tracking-wide uppercase">Identidade</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input label="Nome do Site" value={settings.site_name} onChange={(v) => setSettings({ ...settings, site_name: v })} />
+                    <div>
+                      <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Logo do Site (Upload)</label>
+                      <div className="flex items-center gap-4">
+                        {settings.logo_url && <img src={settings.logo_url} alt="Logo" className="w-12 h-12 object-contain bg-white/5 rounded-lg" />}
+                        <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo_url', true)} className="flex-grow bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Secao: Tipografia */}
+                <section className="space-y-4">
+                  <div className="border-b border-white/10 pb-2 mb-4">
+                    <h4 className="font-display text-xl text-urban-yellow tracking-wide uppercase">Tipografia</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input label="Google Fonts URL" value={settings.google_fonts_url} onChange={(v) => setSettings({ ...settings, google_fonts_url: v })} placeholder="https://fonts.googleapis.com/css2?family=..." />
+                    <Input label="Nome da Fonte (CSS)" value={settings.font_family} onChange={(v) => setSettings({ ...settings, font_family: v })} placeholder="Bebas Neue" />
+                  </div>
+                </section>
+
+                {/* Secao: Redes & Midia */}
+                <section className="space-y-4">
+                  <div className="border-b border-white/10 pb-2 mb-4">
+                    <h4 className="font-display text-xl text-urban-yellow tracking-wide uppercase">Redes &amp; Mídia</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input label="Instagram URL" value={settings.instagram_url} onChange={(v) => setSettings({ ...settings, instagram_url: v })} />
+                    <Input label="YouTube URL" value={settings.youtube_url} onChange={(v) => setSettings({ ...settings, youtube_url: v })} />
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Imagem da Página de Doação (Upload)</label>
+                      <div className="flex items-center gap-4">
+                        {settings.donation_image_url && <img src={settings.donation_image_url} alt="Donation" className="w-20 h-12 object-cover rounded-lg" />}
+                        <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'donation_image_url', true)} className="flex-grow bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {settingsSaveStatus === 'ok' && (
+                  <div role="status" aria-live="polite" className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-bold">Configurações salvas com sucesso.</div>
+                )}
+                {settingsSaveStatus === 'error' && (
+                  <div role="alert" className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold">Erro ao salvar configurações. Tente novamente.</div>
+                )}
+                <button type="submit" disabled={settingsSaveStatus === 'saving' || isUploading} className="w-full py-5 bg-urban-yellow text-urban-black font-bold text-xl rounded-xl hover:bg-yellow-500 transition-all street-border flex items-center justify-center">
+                  {settingsSaveStatus === 'saving' ? <><Loader2 size={24} className="animate-spin mr-2" />SALVANDO...</> : isUploading ? <Loader2 size={24} className="animate-spin" /> : 'SALVAR CONFIGURAÇÕES GERAIS'}
+                </button>
+              </form>
+
+              {/* Live Preview */}
+              <aside className="hidden md:block sticky top-6">
+                <div className="street-card rounded-3xl p-6 space-y-4 bg-urban-black border border-white/10">
+                  <h4 className="font-display text-lg text-urban-yellow tracking-wide uppercase border-b border-white/10 pb-2">Pré-visualização</h4>
+
+                  <p
+                    className="font-display text-3xl text-white leading-tight break-words"
+                    style={{ fontFamily: settings.font_family ? `${settings.font_family}, sans-serif` : undefined }}
+                  >
+                    {settings.site_name || 'Nome do Site'}
+                  </p>
+
+                  {settings.logo_url && (
+                    <img src={settings.logo_url} alt="Logo preview" className="h-12 object-contain" />
+                  )}
+
+                  <p
+                    className="font-urban text-sm text-gray-300"
+                    style={{ fontFamily: settings.font_family ? `${settings.font_family}, sans-serif` : undefined }}
+                  >
+                    Aqui vai aparecer como o texto do site ficará.
+                  </p>
+
+                  <div className="flex flex-col gap-1 pt-1">
+                    {settings.instagram_url && (
+                      <a
+                        href={settings.instagram_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-urban-yellow/80 hover:text-urban-yellow underline truncate"
+                      >
+                        Instagram: {settings.instagram_url}
+                      </a>
+                    )}
+                    {settings.youtube_url && (
+                      <a
+                        href={settings.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-urban-yellow/80 hover:text-urban-yellow underline truncate"
+                      >
+                        YouTube: {settings.youtube_url}
+                      </a>
+                    )}
+                    {!settings.instagram_url && !settings.youtube_url && (
+                      <p className="text-xs text-gray-600 italic">Preencha as URLs das redes sociais para visualizá-las aqui.</p>
+                    )}
                   </div>
                 </div>
-                <Input label="Google Fonts URL" value={settings.google_fonts_url} onChange={(v) => setSettings({ ...settings, google_fonts_url: v })} placeholder="https://fonts.googleapis.com/css2?family=..." />
-                <Input label="Nome da Fonte (CSS)" value={settings.font_family} onChange={(v) => setSettings({ ...settings, font_family: v })} placeholder="Bebas Neue" />
-                <Input label="Instagram URL" value={settings.instagram_url} onChange={(v) => setSettings({ ...settings, instagram_url: v })} />
-                <Input label="YouTube URL" value={settings.youtube_url} onChange={(v) => setSettings({ ...settings, youtube_url: v })} />
-                <div className="md:col-span-2">
-                  <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Imagem da Página de Doação (Upload)</label>
-                  <div className="flex items-center gap-4">
-                    {settings.donation_image_url && <img src={settings.donation_image_url} alt="Donation" className="w-20 h-12 object-cover rounded-lg" />}
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'donation_image_url', true)} className="flex-grow bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none" />
-                  </div>
-                </div>
-              </div>
-              {settingsSaveStatus === 'ok' && (
-                <div role="status" aria-live="polite" className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-bold">Configurações salvas com sucesso.</div>
-              )}
-              {settingsSaveStatus === 'error' && (
-                <div role="alert" className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold">Erro ao salvar configurações. Tente novamente.</div>
-              )}
-              <button type="submit" disabled={settingsSaveStatus === 'saving' || isUploading} className="w-full py-5 bg-urban-yellow text-urban-black font-bold text-xl rounded-xl hover:bg-yellow-500 transition-all street-border flex items-center justify-center">
-                {settingsSaveStatus === 'saving' ? <><Loader2 size={24} className="animate-spin mr-2" />SALVANDO...</> : isUploading ? <Loader2 size={24} className="animate-spin" /> : 'SALVAR CONFIGURAÇÕES GERAIS'}
-              </button>
-            </motion.form>
+              </aside>
+            </motion.div>
           ) : activeTab !== 'dashboard' ? (
             <>
               <div className="flex items-center justify-between">
@@ -1397,6 +1594,84 @@ export default function AdminPanel() {
                   </div>
                 )}
 
+                {/* Master checkbox — visible only in Cadastros tab */}
+                {activeTab === 'registrations' && !isTabLoading && visibleData.length > 0 && (
+                  <div className="flex items-center gap-3 mb-2 px-1">
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos visíveis"
+                      ref={(el) => {
+                        (masterCheckboxRef as any).current = el;
+                        if (el) {
+                          const allSelected = visibleData.length > 0 && visibleData.every((d: any) => selectedIds.has(d.id));
+                          const someSelected = !allSelected && visibleData.some((d: any) => selectedIds.has(d.id));
+                          el.checked = allSelected;
+                          el.indeterminate = someSelected;
+                        }
+                      }}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(new Set(visibleData.map((d: any) => d.id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }}
+                      className="w-4 h-4 rounded accent-urban-yellow cursor-pointer"
+                    />
+                    <span className="text-gray-500 text-xs font-urban uppercase tracking-widest">
+                      Selecionar todos ({visibleData.length})
+                    </span>
+                  </div>
+                )}
+
+                {/* Bulk actions toolbar — visible when items are selected in Cadastros */}
+                {activeTab === 'registrations' && selectedIds.size > 0 && (
+                  <div className="sticky top-0 z-20 bg-urban-gray border border-urban-yellow/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3 mb-4 shadow-[0_0_15px_rgba(255,232,31,0.1)]">
+                    <span className="text-white font-bold text-sm">{selectedIds.size} selecionado(s)</span>
+
+                    <button
+                      onClick={() => exportToCSV(visibleData.filter((d: any) => selectedIds.has(d.id)))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold hover:bg-green-500/25 transition-colors"
+                    >
+                      <Download size={14} /> Exportar seleção
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const selected = visibleData.filter((d: any) => selectedIds.has(d.id) && hasNoBible(d));
+                        selected.forEach((item: any) => toggleBibleDeliveredStatus(item.id));
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400/15 text-amber-300 border border-amber-300/30 rounded-lg text-xs font-bold hover:bg-amber-400/25 transition-colors"
+                    >
+                      <BookOpen size={14} /> Marcar Bíblia entregue
+                    </button>
+
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        const newStatus = e.target.value;
+                        selectedIds.forEach((id) => moveCadastroToStage(id, newStatus));
+                        e.target.value = '';
+                      }}
+                      className="bg-urban-gray border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:border-urban-yellow/60 outline-none"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <option value="">Mudar status...</option>
+                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                        <option key={key} value={key}>{cfg.label}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-gray-400 border border-white/10 rounded-lg text-xs font-bold hover:bg-white/10 hover:text-white transition-colors ml-auto"
+                    >
+                      <X size={14} /> Limpar seleção
+                    </button>
+                  </div>
+                )}
+
                 {isTabLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <Loader2 className="animate-spin h-10 w-10 text-urban-yellow" />
@@ -1424,6 +1699,25 @@ export default function AdminPanel() {
                           className="street-card p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
                         >
                       <div className="flex items-center gap-4">
+                        {/* Per-row checkbox — only in Cadastros */}
+                        {activeTab === 'registrations' && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar ${item.name}`}
+                            checked={selectedIds.has(item.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(item.id);
+                                else next.delete(item.id);
+                                return next;
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded accent-urban-yellow cursor-pointer shrink-0"
+                          />
+                        )}
                         {/* activeTab === 'banners' && <img src={item.image_url} className="w-20 h-12 object-cover rounded-lg" /> */}
                         {activeTab === 'team' && <img src={item.photo_url} className="w-12 h-12 object-cover rounded-full" />}
                         {/* activeTab === 'lives' && <div className="w-12 h-12 bg-urban-yellow/10 rounded-xl flex items-center justify-center text-urban-yellow"><Radio size={24} /></div> */}
@@ -1553,14 +1847,31 @@ export default function AdminPanel() {
                               >
                                 <Info size={20} />
                               </button>
-                              <a 
-                                href={`https://wa.me/55${item.whatsapp?.replace(/\D/g, '')}`} 
-                                target="_blank" 
+                              <a
+                                href={`https://wa.me/55${item.whatsapp?.replace(/\D/g, '')}`}
+                                target="_blank"
                                 className="p-2 bg-[#25D366]/10 text-[#25D366] rounded-lg hover:bg-[#25D366] hover:text-white transition-all shadow-[0_0_10px_rgba(37,211,102,0.1)]"
                                 title="Abrir WhatsApp"
                               >
                                 <MessageCircle size={20} />
                               </a>
+                              {/* Inline status select — only in Cadastros */}
+                              {activeTab === 'registrations' && (
+                                <select
+                                  value={item.status || 'novo'}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    moveCadastroToStage(item.id, e.target.value);
+                                  }}
+                                  className="bg-urban-gray border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:border-urban-yellow/60 outline-none"
+                                  title="Mudar status"
+                                >
+                                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                                    <option key={key} value={key}>{cfg.label}</option>
+                                  ))}
+                                </select>
+                              )}
                             </div>
                           )}
                             {activeTab !== 'registrations' && activeTab !== 'prayers' && activeTab !== 'volunteers' && canEditTab(activeTab) && (
