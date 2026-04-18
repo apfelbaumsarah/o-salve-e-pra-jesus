@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -43,6 +43,7 @@ export default function AdminPanel() {
   const [editingNotes, setEditingNotes] = useState('');
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [saveStatusMsg, setSaveStatusMsg] = useState<'idle'|'ok'|'err'>('idle');
+  const [settingsSaveStatus, setSettingsSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
   const [teamRows, setTeamRows] = useState<any[]>([]);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
@@ -280,6 +281,29 @@ export default function AdminPanel() {
     }
   }, [user, activeTab, hasAccess, isMainAdmin]);
 
+  // Close sidebar on ESC key (mobile)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSidebarOpen]);
+
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen && window.innerWidth < 768) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isSidebarOpen]);
+
   const validateDeletePermission = async () => {
     if (!canDeleteTab(activeTab)) return false;
     if (isMainAdmin) return true;
@@ -378,6 +402,7 @@ export default function AdminPanel() {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
+    setSettingsSaveStatus('saving');
     try {
       const finalSettings = { ...settings };
       for (const [key, file] of Object.entries(filesToUpload) as [string, File][]) {
@@ -389,10 +414,12 @@ export default function AdminPanel() {
       await supabase.from('settings').update(finalSettings).eq('id', 1);
       setSettings(finalSettings);
       setFilesToUpload({});
-      alert('Configurações salvas!');
+      setSettingsSaveStatus('ok');
+      setTimeout(() => setSettingsSaveStatus('idle'), 3000);
     } catch (err) {
       console.error('Error saving settings:', err);
-      alert('Erro ao salvar configurações.');
+      setSettingsSaveStatus('error');
+      setTimeout(() => setSettingsSaveStatus('idle'), 3000);
     } finally {
       setIsUploading(false);
     }
@@ -551,12 +578,12 @@ export default function AdminPanel() {
     await loadTabData(activeTab);
   };
 
-  const exportToCSV = () => {
-    if (data.length === 0) return;
-    const headers = Object.keys(data[0]).filter((k) => k !== 'created_at');
+  const exportToCSV = (rows: any[]) => {
+    if (!rows.length) return;
+    const headers = Object.keys(rows[0]).filter((k) => k !== 'created_at');
     const csvContent = [
       headers.join(','),
-      ...data.map((row) =>
+      ...rows.map((row) =>
         headers.map((header) => {
           let val = row[header];
           if (typeof val === 'string') val = val.replace(/"/g, '""');
@@ -693,10 +720,13 @@ export default function AdminPanel() {
           
           <form onSubmit={handleLogin} className="space-y-4 text-left">
             <div>
-              <label className="block text-gray-500 text-xs font-bold uppercase mb-2">E-mail</label>
-              <input 
-                type="email" 
-                className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none"
+              <label htmlFor="admin-email" className="block text-gray-500 text-xs font-bold uppercase mb-2">E-mail</label>
+              <input
+                id="admin-email"
+                name="email"
+                autoComplete="email"
+                type="email"
+                className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urban-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-urban-black"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -704,18 +734,24 @@ export default function AdminPanel() {
               />
             </div>
             <div>
-              <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Senha</label>
+              <label htmlFor="admin-password" className="block text-gray-500 text-xs font-bold uppercase mb-2">Senha</label>
               <div className="relative">
-                <input 
+                <input
+                  id="admin-password"
+                  name="password"
+                  autoComplete="current-password"
                   type={showPassword ? "text" : "password"}
-                  className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none"
+                  className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urban-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-urban-black"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <button 
+                <button
                   type="button"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={showPassword}
+                  aria-controls="admin-password"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
                 >
@@ -723,15 +759,18 @@ export default function AdminPanel() {
                 </button>
               </div>
             </div>
-            
+
             {loginError && (
-              <p className="text-red-500 text-sm font-bold text-center mt-2">{loginError}</p>
+              <div role="alert" aria-live="assertive">
+                <p className="text-red-500 text-sm font-bold text-center mt-2">{loginError}</p>
+              </div>
             )}
 
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-all street-border mt-4 flex items-center justify-center gap-2"
+              aria-busy={isLoggingIn}
+              className="w-full py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-all street-border mt-4 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoggingIn ? <Loader2 size={24} className="animate-spin" /> : 'ENTRAR NO PAINEL'}
             </button>
@@ -804,44 +843,157 @@ export default function AdminPanel() {
       return (order[a.status || 'novo'] ?? 0) - (order[b.status || 'novo'] ?? 0);
     });
 
+  const chipCounts = useMemo(() => ({
+    all: (sourceRows || []).length,
+    acceptedJesus: (sourceRows || []).filter((d: any) => d.accepted_jesus === true).length,
+    knowing: (sourceRows || []).filter((d: any) => d.accepted_jesus === false && d.attends_church === false).length,
+    wantsUpdates: (sourceRows || []).filter((d: any) => d.wants_updates === true).length,
+    noBible: (sourceRows || []).filter((d: any) => hasNoBible(d)).length,
+  }), [sourceRows]);
+
   return (
     <div className="min-h-screen bg-urban-black flex">
-      <aside className={cn(
-        'bg-urban-gray border-r border-white/10 flex flex-col fixed top-0 left-0 h-screen z-50 transition-transform duration-300',
-        isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full w-64 md:translate-x-0 md:w-64'
-      )}>
+      <aside
+        id="admin-sidebar"
+        className={cn(
+          "bg-urban-gray border-r border-white/10 flex flex-col fixed top-0 left-0 h-screen z-50 transition-transform duration-300",
+          isSidebarOpen
+            ? "w-64 translate-x-0"
+            : "-translate-x-full w-64 md:translate-x-0 md:w-64",
+        )}
+      >
         <div className="p-6 flex items-center justify-between border-b border-white/10">
-          <h1 className="font-display text-2xl text-white">PAINEL <span className="text-urban-yellow">ADMIN</span></h1>
-          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-white">
+          <h1 className="font-display text-2xl text-white">
+            PAINEL <span className="text-urban-yellow">ADMIN</span>
+          </h1>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden text-gray-400 hover:text-white"
+          >
             <X size={24} />
           </button>
         </div>
-        <div className="flex flex-col gap-2 p-4 flex-grow overflow-y-auto">
-          {canViewTab('dashboard') && <SidebarButton active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} icon={<LayoutDashboard size={20} />} label="Visão Geral" />}
-          {canViewTab('crm_pipeline') && <SidebarButton active={activeTab === 'crm_pipeline'} onClick={() => { setActiveTab('crm_pipeline'); setIsSidebarOpen(false); }} icon={<Box size={20} />} label="Pipeline CRM" />}
-          {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations' && filterRegistrations === 'all'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); setIsSidebarOpen(false); }} icon={<Users size={20} />} label="Cadastros" />}
-          {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations' && filterRegistrations === 'noBible'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('noBible'); setIsSidebarOpen(false); }} icon={<BookOpen size={20} />} label="Sem Bíblia" />}
+        <nav
+          aria-label="Seções do painel"
+          className="flex flex-col gap-2 p-4 flex-grow overflow-y-auto"
+        >
+          {canViewTab("dashboard") && (
+            <SidebarButton
+              active={activeTab === "dashboard"}
+              onClick={() => {
+                setActiveTab("dashboard");
+                setIsSidebarOpen(false);
+              }}
+              icon={<LayoutDashboard size={20} />}
+              label="Visão Geral"
+            />
+          )}
+          {canViewTab("crm_pipeline") && (
+            <SidebarButton
+              active={activeTab === "crm_pipeline"}
+              onClick={() => {
+                setActiveTab("crm_pipeline");
+                setIsSidebarOpen(false);
+              }}
+              icon={<Box size={20} />}
+              label="Pipeline CRM"
+            />
+          )}
+          {canViewTab("registrations") && (
+            <SidebarButton
+              active={
+                activeTab === "registrations" && filterRegistrations === "all"
+              }
+              onClick={() => {
+                setActiveTab("registrations");
+                setFilterRegistrations("all");
+                setIsSidebarOpen(false);
+              }}
+              icon={<Users size={20} />}
+              label="Cadastros"
+            />
+          )}
+          {canViewTab("registrations") && (
+            <SidebarButton
+              active={
+                activeTab === "registrations" &&
+                filterRegistrations === "noBible"
+              }
+              onClick={() => {
+                setActiveTab("registrations");
+                setFilterRegistrations("noBible");
+                setIsSidebarOpen(false);
+              }}
+              icon={<BookOpen size={20} />}
+              label="Sem Bíblia"
+            />
+          )}
           {/* {canViewTab('banners') && <SidebarButton active={activeTab === 'banners'} onClick={() => { setActiveTab('banners'); setIsSidebarOpen(false); }} icon={<ImageIcon size={20} />} label="Banners" />} */}
           {/* canViewTab('lives') && <SidebarButton active={activeTab === 'lives'} onClick={() => { setActiveTab('lives'); setIsSidebarOpen(false); }} icon={<Radio size={20} />} label="Lives" /> */}
           {/* canViewTab('events') && <SidebarButton active={activeTab === 'events'} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }} icon={<Calendar size={20} />} label="Eventos" /> */}
-          {canViewTab('prayers') && <SidebarButton active={activeTab === 'prayers'} onClick={() => { setActiveTab('prayers'); setIsSidebarOpen(false); }} icon={<Heart size={20} />} label="Orações" />}
-          {canViewTab('volunteers') && <SidebarButton active={activeTab === 'volunteers'} onClick={() => { setActiveTab('volunteers'); setIsSidebarOpen(false); }} icon={<HeartHandshake size={20} />} label="Voluntários" />}
+          {canViewTab("prayers") && (
+            <SidebarButton
+              active={activeTab === "prayers"}
+              onClick={() => {
+                setActiveTab("prayers");
+                setIsSidebarOpen(false);
+              }}
+              icon={<Heart size={20} />}
+              label="Orações"
+            />
+          )}
+          {canViewTab("volunteers") && (
+            <SidebarButton
+              active={activeTab === "volunteers"}
+              onClick={() => {
+                setActiveTab("volunteers");
+                setIsSidebarOpen(false);
+              }}
+              icon={<HeartHandshake size={20} />}
+              label="Voluntários"
+            />
+          )}
           {/* {canViewTab('team') && <SidebarButton active={activeTab === 'team'} onClick={openTeamTab} icon={<Users size={20} />} label="Equipe" />} */}
-        </div>
+        </nav>
         <div className="p-4 border-t border-white/10">
           <div className="px-4 py-2 mb-2">
-            <p className="text-gray-500 text-[10px] font-bold uppercase">Logado como</p>
-            <p className="text-white text-xs truncate font-bold">{user.email}</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase">
+              Logado como
+            </p>
+            <p className="text-white text-xs truncate font-bold">
+              {user.email}
+            </p>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 w-full px-4 py-3 bg-red-500/10 text-red-500 rounded-xl font-bold hover:bg-red-500 hover:text-white transition-colors">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-4 py-3 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 hover:text-white transition-colors"
+          >
             <LogOut size={20} /> Sair do Painel
           </button>
         </div>
       </aside>
 
+      {isSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 z-40"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <div className="md:hidden fixed top-0 w-full bg-urban-gray border-b border-white/10 p-4 z-40 flex items-center justify-between">
-        <h1 className="font-display text-xl text-white">PAINEL <span className="text-urban-yellow">ADMIN</span></h1>
-        <button onClick={() => setIsSidebarOpen(true)} className="text-white"><MenuIcon size={24} /></button>
+        <h1 className="font-display text-xl text-white">
+          PAINEL <span className="text-urban-yellow">ADMIN</span>
+        </h1>
+        <button
+          aria-label="Abrir menu"
+          aria-expanded={isSidebarOpen}
+          aria-controls="admin-sidebar"
+          onClick={() => setIsSidebarOpen(true)}
+          className="text-white"
+        >
+          <MenuIcon size={24} />
+        </button>
       </div>
 
       <div className="flex-1 md:ml-64 pt-20 md:pt-8 p-4 md:p-8 min-h-screen">
@@ -999,7 +1151,7 @@ export default function AdminPanel() {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-start gap-2">
                                   <GripVertical size={15} className="text-gray-500 mt-1 shrink-0" />
-                                  <h5 className="font-urban font-bold text-white leading-snug break-words">{item.name || 'Sem nome'}</h5>
+                                  <h5 className="font-urban font-bold text-white leading-snug break-words line-clamp-2" title={item.name || 'Sem nome'}>{item.name || 'Sem nome'}</h5>
                                 </div>
                                 {item.accepted_jesus && <span className="text-[10px] shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] rounded-full uppercase font-bold border border-[#00FF66]/20">Aceitou Jesus</span>}
                               </div>
@@ -1069,8 +1221,14 @@ export default function AdminPanel() {
                   </div>
                 </div>
               </div>
-              <button type="submit" disabled={isUploading} className="w-full py-5 bg-urban-yellow text-urban-black font-bold text-xl rounded-xl hover:bg-yellow-500 transition-all street-border flex items-center justify-center">
-                {isUploading ? <Loader2 size={24} className="animate-spin" /> : 'SALVAR CONFIGURAÇÕES GERAIS'}
+              {settingsSaveStatus === 'ok' && (
+                <div role="status" aria-live="polite" className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-bold">Configurações salvas com sucesso.</div>
+              )}
+              {settingsSaveStatus === 'error' && (
+                <div role="alert" className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold">Erro ao salvar configurações. Tente novamente.</div>
+              )}
+              <button type="submit" disabled={settingsSaveStatus === 'saving' || isUploading} className="w-full py-5 bg-urban-yellow text-urban-black font-bold text-xl rounded-xl hover:bg-yellow-500 transition-all street-border flex items-center justify-center">
+                {settingsSaveStatus === 'saving' ? <><Loader2 size={24} className="animate-spin mr-2" />SALVANDO...</> : isUploading ? <Loader2 size={24} className="animate-spin" /> : 'SALVAR CONFIGURAÇÕES GERAIS'}
               </button>
             </motion.form>
           ) : activeTab !== 'dashboard' ? (
@@ -1110,7 +1268,7 @@ export default function AdminPanel() {
                   <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
 
                     <button
-                      onClick={exportToCSV}
+                      onClick={() => exportToCSV(visibleData)}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-colors street-border"
                     >
                       <Download size={20} /> EXPORTAR CSV
@@ -1205,31 +1363,31 @@ export default function AdminPanel() {
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all', (filterRegistrations === 'all' && activeTab === 'registrations') ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10')}
                     >
-                      Todos os Cadastros
+                      Todos os Cadastros ({chipCounts.all})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'acceptedJesus' && activeTab === 'registrations') ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.4)]' : 'bg-white/5 border border-white/10 text-[#00FF66] opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
-                      <Heart size={16} /> Aceitaram a Jesus
+                      <Heart size={16} /> Aceitaram a Jesus ({chipCounts.acceptedJesus})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('knowing'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'knowing' && activeTab === 'registrations') ? 'bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.4)]' : 'bg-white/5 border border-white/10 text-cyan-400 opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
-                      <UserPlus size={16} /> Estão Conhecendo
+                      <UserPlus size={16} /> Estão Conhecendo ({chipCounts.knowing})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('wantsUpdates'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'wantsUpdates' && activeTab === 'registrations') ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 border border-white/10 text-purple-400 opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
-                      <Bell size={16} /> Querem Atualizações
+                      <Bell size={16} /> Querem Atualizações ({chipCounts.wantsUpdates})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('noBible'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'noBible' && activeTab === 'registrations') ? 'bg-amber-400 text-black shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-white/5 border border-white/10 text-amber-300 opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
-                      <BookOpen size={16} /> Sem Bíblia
+                      <BookOpen size={16} /> Sem Bíblia ({chipCounts.noBible})
                     </button>
                   </div>
                 )}
@@ -1243,7 +1401,7 @@ export default function AdminPanel() {
                   <>
                     {(sourceRows || []).length === 0 && (
                       <div className="text-center py-12 text-gray-500">
-                        {activeTab === 'team' ? 'Nenhum membro encontrado na equipe.' : 'Nenhum dado encontrado aqui.'}
+                        {activeTab === 'team' ? 'Nenhum membro encontrado na equipe.' : activeTab === 'prayers' && !normalizedSearchTerm ? 'Nenhum pedido de oração pendente no momento. Todas as orações foram cobertas.' : 'Nenhum dado encontrado aqui.'}
                       </div>
                     )}
                     {(sourceRows || []).length > 0 && visibleData.length === 0 && (
@@ -1368,7 +1526,7 @@ export default function AdminPanel() {
                                   <Check size={20} />
                                 </button>
                               )}
-                              {activeTab === 'registrations' && filterRegistrations === 'noBible' && hasNoBible(item) && (
+                              {activeTab === 'registrations' && hasNoBible(item) && (
                                 <button
                                   onClick={() => toggleBibleDeliveredStatus(item.id)}
                                   className="p-2 rounded-lg transition-all bg-amber-400/15 text-amber-300 hover:bg-amber-400 hover:text-black border border-amber-300/30"
@@ -1655,13 +1813,27 @@ export default function AdminPanel() {
   );
 }
 
-function SidebarButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function SidebarButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
   return (
     <button
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-xl font-urban font-bold text-sm transition-all text-left',
-        active ? 'bg-urban-yellow text-urban-black shadow-lg' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+        "relative flex items-center gap-3 px-4 py-3 rounded-xl font-urban font-bold text-sm transition-all text-left",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urban-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-urban-black",
+        active
+          ? "bg-urban-yellow text-urban-black shadow-lg before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-urban-yellow before:rounded-r"
+          : "text-gray-400 hover:bg-white/5 hover:text-white",
       )}
     >
       {icon} {label}
