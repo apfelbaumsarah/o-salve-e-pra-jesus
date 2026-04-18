@@ -26,7 +26,6 @@ const LiveStream = () => {
   const [lives, setLives] = useState<Live[]>([]);
   const [mainLive, setMainLive] = useState<Live | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   useEffect(() => {
@@ -103,13 +102,13 @@ const LiveStream = () => {
           text: shareData.text,
           url: shareData.url,
         });
-        return;
       } catch {
-        // If user cancels native share, keep fallback menu available.
+        // If user cancels native share, do nothing.
       }
+      return;
     }
 
-    setIsShareMenuOpen((prev) => !prev);
+    await copyShareText();
   };
 
   if (loading) {
@@ -137,46 +136,8 @@ const LiveStream = () => {
             >
               <Share2 size={20} /> COMPARTILHAR TRANSMISSÃO
             </button>
-
-            {isShareMenuOpen && mainLive && (
-              <div className="mt-3 md:mt-2 md:absolute md:right-0 z-30 p-3 bg-urban-gray border border-white/10 rounded-xl shadow-2xl min-w-[280px]">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Assista "${mainLive.title}" no canal O SALVE é pra JESUS: https://www.youtube.com/watch?v=${mainLive.youtube_id}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
-                  >
-                    WhatsApp
-                  </a>
-                  <a
-                    href={`sms:?&body=${encodeURIComponent(`Assista "${mainLive.title}" no canal O SALVE é pra JESUS: https://www.youtube.com/watch?v=${mainLive.youtube_id}`)}`}
-                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
-                  >
-                    SMS
-                  </a>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await copyShareText();
-                      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
-                    }}
-                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
-                  >
-                    Instagram
-                  </button>
-                  <button
-                    type="button"
-                    onClick={copyShareText}
-                    className="text-center px-3 py-2 rounded-lg bg-black/20 hover:bg-white/10 text-white"
-                  >
-                    Copiar
-                  </button>
-                </div>
-                {copiedFeedback && (
-                  <p className="text-xs text-urban-yellow mt-2 text-center">Link copiado para compartilhar.</p>
-                )}
-              </div>
+            {copiedFeedback && (
+              <p className="text-xs text-urban-yellow mt-2 text-center md:text-right">Link copiado para compartilhar.</p>
             )}
           </div>
         </div>
