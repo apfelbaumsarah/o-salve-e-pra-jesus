@@ -1384,21 +1384,6 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {stageKeys.map((sk) => {
-                      const cfg = STATUS_CONFIG[sk];
-                      const count = stageTotals[sk];
-                      const pct = totalVisible > 0 ? Math.round((count / totalVisible) * 100) : 0;
-                      return (
-                        <div key={sk} className="rounded-2xl bg-urban-gray/75 border border-white/[0.08] p-4 flex flex-col gap-1">
-                          <span className={cn('text-[10px] font-bold uppercase tracking-wider', cfg.color.split(' ')[1])}>{cfg.label}</span>
-                          <span className="text-white font-display text-2xl leading-none">{count}</span>
-                          <span className="text-gray-500 text-xs">{pct}% do funil</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
                   <div className="overflow-x-auto scrollbar-hidden pb-2">
                     <DndContext
                       sensors={pipelineSensors}
