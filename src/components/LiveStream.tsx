@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { motion } from 'motion/react';
-import { Play, Calendar, Video, Share2, Youtube } from 'lucide-react';
+import { Play, Calendar, Share2, Youtube } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -13,6 +13,15 @@ interface Live {
   is_main: boolean;
 }
 
+const FEATURED_VIDEO_ID = 'Bqc6B5LzTN0';
+const FEATURED_VIDEO: Live = {
+  id: 'featured-video-bqc6b5lztN0',
+  youtube_id: FEATURED_VIDEO_ID,
+  title: 'O FOGO ARDERÁ AO VIVO - Alexsander Lucio',
+  date: '',
+  is_main: true,
+};
+
 const LiveStream = () => {
   const [lives, setLives] = useState<Live[]>([]);
   const [mainLive, setMainLive] = useState<Live | null>(null);
@@ -21,15 +30,29 @@ const LiveStream = () => {
   const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   useEffect(() => {
+    const mergeWithFeaturedVideo = (incomingLives: Live[]) => {
+      const hasFeatured = incomingLives.some((live) => live.youtube_id === FEATURED_VIDEO_ID);
+      return hasFeatured ? incomingLives : [FEATURED_VIDEO, ...incomingLives];
+    };
+
+    const getInitialMainLive = (incomingLives: Live[]) => {
+      return (
+        incomingLives.find((live) => live.youtube_id === FEATURED_VIDEO_ID) ||
+        incomingLives.find((live) => live.is_main) ||
+        incomingLives[0] ||
+        null
+      );
+    };
+
     const fetchLives = async () => {
       const { data } = await supabase
         .from('lives')
         .select('*')
         .order('date', { ascending: false })
         .limit(10);
-      const livesData = data || [];
+      const livesData = mergeWithFeaturedVideo(data || []);
       setLives(livesData);
-      const main = livesData.find((l) => l.is_main) || livesData[0] || null;
+      const main = getInitialMainLive(livesData);
       setMainLive(main);
       setLoading(false);
     };
@@ -39,9 +62,9 @@ const LiveStream = () => {
       .channel('lives-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lives' }, async () => {
         const { data } = await supabase.from('lives').select('*').order('date', { ascending: false }).limit(10);
-        const livesData = data || [];
+        const livesData = mergeWithFeaturedVideo(data || []);
         setLives(livesData);
-        const main = livesData.find((l: Live) => l.is_main) || livesData[0] || null;
+        const main = getInitialMainLive(livesData);
         setMainLive(main);
       })
       .subscribe();
@@ -101,11 +124,10 @@ const LiveStream = () => {
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
-          <div>
-            <div className="flex items-center gap-2 text-urban-yellow mb-2">
-              <Video size={20} />
-              <span className="font-urban font-bold text-sm tracking-widest uppercase">MENSAGENS E VÍDEOS</span>
-            </div>
+          <div className="mt-8 md:mt-10">
+            <p className="font-urban font-bold text-sm tracking-widest uppercase text-urban-yellow mb-2">
+              Mensagens e videos
+            </p>
             <h1 className="font-display text-6xl text-white">ASSISTA <span className="text-urban-yellow">O SALVE</span></h1>
           </div>
           <div className="relative w-full md:w-auto">
@@ -201,7 +223,7 @@ const LiveStream = () => {
                 href="https://www.youtube.com/@salveprajesus"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-all street-border"
               >
                 <Youtube size={24} /> INSCREVA-SE NO CANAL
               </a>
@@ -214,7 +236,7 @@ const LiveStream = () => {
               </p>
               <a
                 href="/oracao"
-                className="inline-block w-full text-center py-3 bg-urban-yellow text-urban-black font-bold rounded-lg hover:bg-yellow-600 transition-colors"
+                className="inline-block w-full text-center py-4 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-500 transition-all street-border"
               >
                 PEDIR ORAÇÃO
               </a>

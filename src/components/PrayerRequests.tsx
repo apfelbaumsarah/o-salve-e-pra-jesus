@@ -35,11 +35,10 @@ const PrayerRequests = () => {
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent p-8 md:p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-urban-yellow" />
+        <div className="p-10 rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
           <div className="mb-8">
-            <h1 className="font-display text-5xl text-white">PEDIDO DE <span className="text-urban-yellow">ORAÇÃO</span></h1>
-            <p className="font-urban text-gray-400">Nossa equipe de intercessão estará orando por você.</p>
+            <h1 className="font-display text-6xl text-white mb-4">PEDIDO DE <span className="text-urban-yellow">ORAÇÃO</span></h1>
+            <p className="font-urban text-gray-400 text-lg">Nossa equipe de intercessão estará orando por você.</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -77,7 +76,7 @@ const PrayerRequests = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none"
+                    className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none"
                     placeholder="Como você se chama?"
                   />
                 </div>
@@ -88,7 +87,7 @@ const PrayerRequests = () => {
                     rows={6}
                     value={formData.request}
                     onChange={(e) => setFormData({ ...formData, request: e.target.value })}
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none resize-none"
+                    className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none resize-none"
                     placeholder="Conte-nos pelo que você precisa de oração..."
                   />
                 </div>
@@ -100,7 +99,7 @@ const PrayerRequests = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-3 py-5 bg-urban-yellow text-urban-black font-bold text-xl rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all street-border"
+                  className="w-full flex items-center justify-center gap-3 py-5 bg-urban-yellow text-urban-black font-bold text-2xl rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all street-border"
                 >
                   {isSubmitting ? (
                     <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>

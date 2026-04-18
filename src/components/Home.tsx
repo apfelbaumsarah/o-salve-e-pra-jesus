@@ -255,7 +255,7 @@ const Home = () => {
           </p>
           <Link
             to="/cadastro"
-            className="inline-block px-12 py-5 bg-urban-black text-white font-bold text-2xl rounded-xl street-border hover:scale-105 transition-transform"
+            className="inline-block px-12 py-5 bg-urban-black text-white font-bold text-2xl rounded-xl street-border hover:bg-black/80 transition-all"
           >
             TÔ DENTRO!
           </Link>

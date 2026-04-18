@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { VolunteerModal } from './VolunteerModal';
+import volunteersImage from '../../imagens/10.png';
 
 const Volunteers = () => {
   const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState(false);
@@ -12,8 +13,7 @@ const Volunteers = () => {
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-urban-gray p-8 md:p-10 rounded-[2.5rem] border border-white/5 relative overflow-hidden mb-10">
-          <div className="absolute top-0 left-0 w-full h-2 bg-urban-yellow" />
+        <div className="mb-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -21,6 +21,9 @@ const Volunteers = () => {
             className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 lg:gap-10 items-stretch"
           >
             <div className="text-left">
+              <p className="font-urban font-bold text-sm tracking-widest uppercase text-urban-yellow mt-8 md:mt-10 mb-2">
+                Chamado ao servico
+              </p>
               <h1 className="font-display text-5xl md:text-6xl text-white mb-6 tracking-tight">
                 A MESA É <span className="text-urban-yellow">GRANDE</span>
               </h1>
@@ -37,9 +40,9 @@ const Volunteers = () => {
               </div>
             </div>
 
-            <div className="relative rounded-[2rem] overflow-hidden border border-white/10 aspect-square w-full">
+            <div className="relative rounded-[2rem] overflow-hidden aspect-square w-full">
               <img
-                src="/banner-logo.png"
+                src={volunteersImage}
                 alt="Voluntários da SALVE em ação"
                 className="w-full h-full object-cover"
               />
