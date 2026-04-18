@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import fallbackBannerImageMobile from '../../imagens/13.png';
 
 interface Banner {
   id: string;
@@ -159,7 +160,12 @@ const Home = () => {
             </motion.div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-urban-gray">
-              <div className="text-center">
+              <img
+                src={fallbackBannerImageMobile}
+                alt="O SALVE É PRA JESUS"
+                className="absolute inset-0 w-full h-full object-cover object-top block md:hidden"
+              />
+              <div className="text-center hidden md:block">
                 <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE É PRA JESUS</h1>
                 <p className="font-urban text-gray-400">EM BREVE NOVIDADES</p>
               </div>
