@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import fallbackBannerImageMobile from '../../imagens/13.png';
+import fallbackBannerImageDesktop from '../../imagens/14.png';
+import mobileOverlayImage from '../../imagens/20.png';
 
 interface Banner {
   id: string;
@@ -120,7 +121,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-urban-black pt-20 md:pt-24">
-      <section className={`relative overflow-hidden ${banners.length > 0 ? 'h-[40vh] md:h-[50vh]' : 'aspect-[16/9] md:aspect-[8/3]'}`}>
+      <section className={`relative overflow-hidden ${banners.length > 0 ? 'h-[40vh] md:h-[50vh]' : 'aspect-[4/5] md:aspect-[8/3]'}`}>
         <AnimatePresence mode="wait">
           {banners.length > 0 ? (
             <motion.div
@@ -161,18 +162,25 @@ const Home = () => {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-urban-gray">
               <img
-                src={fallbackBannerImageMobile}
+                src={mobileOverlayImage}
                 alt="O SALVE É PRA JESUS"
-                className="absolute inset-0 w-full h-full object-contain object-top block md:hidden"
+                className="absolute inset-0 w-full h-full object-cover object-center block md:hidden"
               />
+              <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-urban-black/35 to-transparent md:hidden pointer-events-none" />
               <div className="absolute inset-x-0 bottom-0 h-28 md:hidden pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-t from-urban-black via-urban-black/95 to-transparent" />
                 <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-16 w-[85%] rounded-full bg-urban-black/70 blur-2xl opacity-70" />
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-10 w-[65%] rounded-full bg-urban-black/80 blur-xl opacity-60" />
               </div>
-              <div className="text-center hidden md:block">
-                <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE É PRA JESUS</h1>
-                <p className="font-urban text-gray-400">EM BREVE NOVIDADES</p>
+              <div className="absolute inset-0 hidden md:block">
+                <img
+                  src={fallbackBannerImageDesktop}
+                  alt="O SALVE É PRA JESUS"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-black/35 pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-urban-black/95 to-transparent pointer-events-none" />
+                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-urban-black/70 to-transparent pointer-events-none" />
               </div>
             </div>
           )}
@@ -197,7 +205,7 @@ const Home = () => {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="py-2">
+        <div className="py-2 -mt-2 md:mt-0">
           <h1 className="font-display text-4xl md:text-6xl text-urban-yellow tracking-tight mb-4">
             O SALVE É REAL.
           </h1>
