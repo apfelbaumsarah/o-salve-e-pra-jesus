@@ -7,7 +7,8 @@ import {
   Trash2, Check, X, Pencil, AlertTriangle,
   Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns, ArrowUpRight
 } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Chart from 'react-apexcharts';
+import type { ApexOptions } from 'apexcharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../lib/utils';
@@ -30,6 +31,58 @@ type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' 
 const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings'];
 const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team'];
 
+interface AdminDonutProps {
+  labels: string[];
+  values: number[];
+  colors: string[];
+  centerLabel?: string;
+}
+
+const AdminDonut: React.FC<AdminDonutProps> = ({ labels, values, colors, centerLabel = 'Total' }) => {
+  const total = values.reduce((a, b) => a + b, 0);
+  const options: ApexOptions = {
+    chart: { type: 'donut', background: 'transparent', foreColor: '#E5E7EB', animations: { speed: 600 }, dropShadow: { enabled: true, top: 0, left: 0, blur: 10, color: colors[0], opacity: 0.25 } },
+    labels,
+    colors,
+    stroke: { width: 0 },
+    dataLabels: { enabled: false },
+    theme: { mode: 'dark' },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center',
+      labels: { colors: '#9CA3AF' },
+      markers: { size: 6 },
+      fontSize: '12px',
+      fontFamily: 'inherit',
+      itemMargin: { horizontal: 8, vertical: 4 },
+      formatter: (seriesName: string, opts) => `${seriesName} — ${opts.w.globals.series[opts.seriesIndex]}`,
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '70%',
+          labels: {
+            show: true,
+            name: { show: true, color: '#9CA3AF', fontSize: '11px', fontFamily: 'inherit', offsetY: 22 },
+            value: { show: true, color: '#FFFFFF', fontSize: '34px', fontFamily: 'inherit', fontWeight: 700, offsetY: -14, formatter: (v: string) => v },
+            total: { show: true, label: centerLabel, color: '#9CA3AF', fontSize: '11px', fontFamily: 'inherit', fontWeight: 600, formatter: () => String(total) },
+          },
+        },
+        expandOnClick: true,
+      },
+    },
+    fill: {
+      type: 'gradient',
+      gradient: { shade: 'dark', type: 'diagonal1', shadeIntensity: 0.2, gradientToColors: colors, inverseColors: false, opacityFrom: 1, opacityTo: 0.85, stops: [0, 100] },
+    },
+    tooltip: { theme: 'dark', fillSeriesColor: false, y: { formatter: (v: number) => String(v) } },
+    states: {
+      hover: { filter: { type: 'lighten'} },
+      active: { filter: { type: 'darken'} },
+    },
+  };
+  return <Chart options={options} series={values} type="donut" height={280} />;
+};
 
 
 export default function AdminPanel() {
@@ -951,21 +1004,6 @@ export default function AdminPanel() {
   const aindaConhecendo = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
   const jaCaminha = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
 
-  const dataJesus = [
-    { name: `Aceitaram (${aceitaramJesus})`, value: aceitaramJesus, color: '#FFE81F' },
-    { name: `Conhecendo (${aindaConhecendo})`, value: aindaConhecendo, color: '#00FF66' },
-    { name: `Já Cristão/Outros (${jaCaminha})`, value: jaCaminha, color: '#6B7280' }
-  ];
-
-  const dataIgreja = [
-    { name: `Frequenta (${frequentamIgreja})`, value: frequentamIgreja, color: '#00D1FF' },
-    { name: `Não Frequenta (${naoFrequentamIgreja})`, value: naoFrequentamIgreja, color: '#6B7280' }
-  ];
-
-  const dataBiblia = [
-    { name: `Não Tem (${naoTemBiblia})`, value: naoTemBiblia, color: '#A855F7' },
-    { name: `Tem Bíblia (${temBiblia})`, value: temBiblia, color: '#6B7280' }
-  ];
   const sourceRows = activeTab === 'team' ? teamRows : data;
 
   const visibleData = (sourceRows || [])
@@ -1177,7 +1215,7 @@ export default function AdminPanel() {
               </div>
 
               {/* 6-card KPI grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                 {/* Total de Cadastros */}
                 <div
                   className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-urban-yellow hover:scale-[1.04] hover:bg-urban-yellow/5 transition-all"
@@ -1248,68 +1286,40 @@ export default function AdminPanel() {
                   <p className="text-3xl text-white font-display">{aindaConhecendo}</p>
                 </div>
 
-                {/* Taxa de Conversão */}
-                <div className="street-card relative p-4 rounded-2xl border-l-4 border-gray-500 transition-all">
-                  <p className="text-gray-400 font-urban text-xs uppercase font-bold mb-1">Conversão</p>
-                  <p className="text-3xl text-white font-display">
-                    {totalCadastros > 0 ? ((aceitaramJesus / totalCadastros) * 100).toFixed(1) : '0.0'}%
-                  </p>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {/* Gráfico 1: Decisão */}
-                <div className="street-card cursor-pointer p-6 rounded-2xl hover:scale-[1.02] hover:bg-urban-yellow/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}>
-                  <h3 className="text-white font-display text-lg mb-6 text-center tracking-widest uppercase opacity-70">Decisão por Cristo</h3>
-                  <div className="h-56 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={dataJesus} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
-                          {dataJesus.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'transparent' }} />
-                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} verticalAlign="bottom" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-urban-yellow/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}>
+                  <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Decisão por Cristo</h3>
+                  <AdminDonut
+                    labels={['Aceitaram', 'Conhecendo', 'Já Cristão/Outros']}
+                    values={[aceitaramJesus, aindaConhecendo, jaCaminha]}
+                    colors={['#FFE81F', '#00FF66', '#6B7280']}
+                    centerLabel="Total"
+                  />
                 </div>
 
                 {/* Gráfico 2: Igreja */}
-                <div className="street-card cursor-pointer p-6 rounded-2xl hover:scale-[1.02] hover:bg-blue-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('attendsChurch'); }}>
-                  <h3 className="text-white font-display text-lg mb-6 text-center tracking-widest uppercase opacity-70">Frequência Igreja</h3>
-                  <div className="h-56 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={dataIgreja} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
-                          {dataIgreja.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'transparent' }} />
-                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} verticalAlign="bottom" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-blue-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('attendsChurch'); }}>
+                  <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Frequência Igreja</h3>
+                  <AdminDonut
+                    labels={['Frequenta', 'Não Frequenta']}
+                    values={[frequentamIgreja, naoFrequentamIgreja]}
+                    colors={['#00D1FF', '#6B7280']}
+                    centerLabel="Total"
+                  />
                 </div>
 
                 {/* Gráfico 3: Bíblia */}
-                <div className="street-card cursor-pointer p-6 rounded-2xl hover:scale-[1.02] hover:bg-purple-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('hasBible'); }}>
-                  <h3 className="text-white font-display text-lg mb-6 text-center tracking-widest uppercase opacity-70">Tem Bíblia?</h3>
-                  <div className="h-56 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={dataBiblia} innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={40}>
-                          {dataBiblia.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: entry.value > 0 ? `drop-shadow(0px 0px 6px ${entry.color}88)` : 'none' }} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'transparent' }} />
-                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} verticalAlign="bottom" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-purple-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('hasBible'); }}>
+                  <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Tem Bíblia?</h3>
+                  <AdminDonut
+                    labels={['Não Tem', 'Tem Bíblia']}
+                    values={[naoTemBiblia, temBiblia]}
+                    colors={['#A855F7', '#6B7280']}
+                    centerLabel="Total"
+                  />
                 </div>
               </div>
             </div>
