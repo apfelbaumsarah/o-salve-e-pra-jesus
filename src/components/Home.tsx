@@ -119,7 +119,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-urban-black pt-16">
+    <div className="min-h-screen bg-urban-black pt-20 md:pt-24">
       <section className={`relative overflow-hidden ${banners.length > 0 ? 'h-[40vh] md:h-[50vh]' : 'aspect-[16/9] md:aspect-[8/3]'}`}>
         <AnimatePresence mode="wait">
           {banners.length > 0 ? (
@@ -136,7 +136,7 @@ const Home = () => {
               <img
                 src={banners[currentBanner].image_url}
                 alt={banners[currentBanner].title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain object-top md:object-cover bg-urban-black"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
@@ -163,8 +163,13 @@ const Home = () => {
               <img
                 src={fallbackBannerImageMobile}
                 alt="O SALVE É PRA JESUS"
-                className="absolute inset-0 w-full h-full object-cover object-top block md:hidden"
+                className="absolute inset-0 w-full h-full object-contain object-top block md:hidden"
               />
+              <div className="absolute inset-x-0 bottom-0 h-28 md:hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-t from-urban-black via-urban-black/95 to-transparent" />
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-16 w-[85%] rounded-full bg-urban-black/70 blur-2xl opacity-70" />
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-10 w-[65%] rounded-full bg-urban-black/80 blur-xl opacity-60" />
+              </div>
               <div className="text-center hidden md:block">
                 <h1 className="font-display text-4xl md:text-6xl text-white mb-4">O SALVE É PRA JESUS</h1>
                 <p className="font-urban text-gray-400">EM BREVE NOVIDADES</p>
