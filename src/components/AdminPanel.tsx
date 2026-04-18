@@ -210,8 +210,10 @@ export default function AdminPanel() {
 
     let query = supabase.from(tableName).select('*');
 
-    if (tab === 'dashboard' || tab === 'registrations') {
+    if (tab === 'dashboard') {
       query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false });
+    } else if (tab === 'registrations') {
+      query = query.order('created_at', { ascending: false });
     } else if (tab === 'banners') {
       query = query.order('order', { ascending: true });
     } else if (tab === 'lives') {
@@ -581,7 +583,6 @@ export default function AdminPanel() {
     novo:              { label: 'Novo',              color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',    dot: 'bg-blue-400' },
     contatado:         { label: 'Contatado',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/20', dot: 'bg-urban-yellow' },
     acompanhamento:    { label: 'Em Acompanhamento', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20', dot: 'bg-purple-400' },
-    sem_biblia:        { label: 'Sem Bíblia',        color: 'bg-amber-400/10 text-amber-300 border-amber-400/20', dot: 'bg-amber-300' },
     concluido:         { label: 'Concluído',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/30 shadow-[0_0_12px_rgba(206,189,103,0.25)]',  dot: 'bg-urban-yellow' },
   };
 
@@ -593,9 +594,12 @@ export default function AdminPanel() {
     item?.has_bible === '0';
   const getPipelineStage = (item: any) => {
     const currentStage = getStatus(item);
-    if (hasNoBible(item) && currentStage !== 'concluido') return 'sem_biblia';
+    if (currentStage === 'sem_biblia') return 'acompanhamento';
     return currentStage;
   };
+  const isEligibleForPipeline = (item: any) =>
+    item?.accepted_jesus === true ||
+    (item?.accepted_jesus === false && item?.attends_church === false);
 
   const parseAdminNotes = (notes: string | null | undefined) => {
     const text = notes || '';
@@ -791,7 +795,12 @@ export default function AdminPanel() {
       );
     })
     .sort((a, b) => {
-      const order: Record<string, number> = { novo: 0, contatado: 1, acompanhamento: 2, sem_biblia: 3, concluido: 4 };
+      if (activeTab === 'registrations' && filterRegistrations === 'all') return 0;
+      if (activeTab === 'registrations') {
+        const prayerDiff = Number(!!a.prayer_done) - Number(!!b.prayer_done);
+        if (prayerDiff !== 0) return prayerDiff;
+      }
+      const order: Record<string, number> = { novo: 0, contatado: 1, acompanhamento: 2, concluido: 3 };
       return (order[a.status || 'novo'] ?? 0) - (order[b.status || 'novo'] ?? 0);
     });
 
@@ -809,12 +818,14 @@ export default function AdminPanel() {
         </div>
         <div className="flex flex-col gap-2 p-4 flex-grow overflow-y-auto">
           {canViewTab('dashboard') && <SidebarButton active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} icon={<LayoutDashboard size={20} />} label="Visão Geral" />}
-          {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); setIsSidebarOpen(false); }} icon={<Users size={20} />} label="Cadastros" />}
           {canViewTab('crm_pipeline') && <SidebarButton active={activeTab === 'crm_pipeline'} onClick={() => { setActiveTab('crm_pipeline'); setIsSidebarOpen(false); }} icon={<Box size={20} />} label="Pipeline CRM" />}
+          {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations' && filterRegistrations === 'all'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); setIsSidebarOpen(false); }} icon={<Users size={20} />} label="Cadastros" />}
+          {canViewTab('registrations') && <SidebarButton active={activeTab === 'registrations' && filterRegistrations === 'noBible'} onClick={() => { setActiveTab('registrations'); setFilterRegistrations('noBible'); setIsSidebarOpen(false); }} icon={<BookOpen size={20} />} label="Sem Bíblia" />}
           {/* {canViewTab('banners') && <SidebarButton active={activeTab === 'banners'} onClick={() => { setActiveTab('banners'); setIsSidebarOpen(false); }} icon={<ImageIcon size={20} />} label="Banners" />} */}
           {/* canViewTab('lives') && <SidebarButton active={activeTab === 'lives'} onClick={() => { setActiveTab('lives'); setIsSidebarOpen(false); }} icon={<Radio size={20} />} label="Lives" /> */}
           {/* canViewTab('events') && <SidebarButton active={activeTab === 'events'} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }} icon={<Calendar size={20} />} label="Eventos" /> */}
           {canViewTab('prayers') && <SidebarButton active={activeTab === 'prayers'} onClick={() => { setActiveTab('prayers'); setIsSidebarOpen(false); }} icon={<Heart size={20} />} label="Orações" />}
+          {canViewTab('volunteers') && <SidebarButton active={activeTab === 'volunteers'} onClick={() => { setActiveTab('volunteers'); setIsSidebarOpen(false); }} icon={<HeartHandshake size={20} />} label="Voluntários" />}
           {/* {canViewTab('team') && <SidebarButton active={activeTab === 'team'} onClick={openTeamTab} icon={<Users size={20} />} label="Equipe" />} */}
         </div>
         <div className="p-4 border-t border-white/10">
@@ -923,8 +934,8 @@ export default function AdminPanel() {
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="rounded-3xl bg-urban-gray/80 border border-white/10 p-6 md:p-8 flex flex-col gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)]">
                 <div>
-                  <h3 className="text-white font-display text-3xl uppercase tracking-wide mb-2">Pipeline CRM</h3>
-                  <p className="text-gray-400 font-urban">Visual em formato Trello com os dados reais de Cadastros.</p>
+                  <h3 className="text-white font-display text-3xl uppercase tracking-wide mb-2">Acompanhamento de Discípulos</h3>
+                  <p className="text-gray-400 font-urban">Acompanhe cada pessoa que aceitou Jesus ou está conhecendo, do primeiro contato ao discipulado.</p>
                 </div>
                 <div className="relative w-full md:w-96">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
@@ -938,10 +949,11 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto md:overflow-x-visible scrollbar-hidden pb-2">
-                <div className="grid grid-flow-col auto-cols-[88vw] gap-4 md:grid-flow-row md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:auto-cols-auto">
-                  {(['novo', 'contatado', 'acompanhamento', 'sem_biblia', 'concluido'] as const).map((stageKey) => {
+              <div className="overflow-x-auto scrollbar-hidden pb-2">
+                <div className="grid grid-flow-col auto-cols-[min(88vw,320px)] gap-4">
+                  {(['novo', 'contatado', 'acompanhamento', 'concluido'] as const).map((stageKey) => {
                     const cards = (data || [])
+                      .filter((item: any) => isEligibleForPipeline(item))
                       .filter((item: any) => getPipelineStage(item) === stageKey)
                       .filter((item: any) => {
                         if (!normalizedSearchTerm) return true;
@@ -1218,18 +1230,6 @@ export default function AdminPanel() {
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'noBible' && activeTab === 'registrations') ? 'bg-amber-400 text-black shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-white/5 border border-white/10 text-amber-300 opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
                       <BookOpen size={16} /> Sem Bíblia
-                    </button>
-                    <button
-                      onClick={() => setActiveTab(canViewTab('prayers') ? 'prayers' : 'registrations')}
-                      className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', activeTab === 'prayers' ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'bg-white/5 border border-white/10 text-blue-400 hover:text-blue-300 hover:bg-white/10')}
-                    >
-                      <Heart size={16} /> Pedidos de Oração
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('volunteers')}
-                      className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', activeTab === 'volunteers' ? 'bg-urban-yellow text-urban-black shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-white/5 border border-white/10 text-urban-yellow hover:text-urban-yellow hover:bg-white/10')}
-                    >
-                      <HeartHandshake size={16} /> Voluntários
                     </button>
                   </div>
                 )}
