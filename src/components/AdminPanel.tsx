@@ -5,7 +5,7 @@ import {
   LogOut, LogIn, Users, Heart, Download, Search, Bell, UserPlus,
   Calendar, Phone, Image as ImageIcon, Radio, Plus,
   Trash2, Check, X, Pencil, AlertTriangle,
-  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical
+  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
@@ -895,7 +895,7 @@ export default function AdminPanel() {
                 setActiveTab("crm_pipeline");
                 setIsSidebarOpen(false);
               }}
-              icon={<Box size={20} />}
+              icon={<Columns size={20} />}
               label="Pipeline CRM"
             />
           )}
@@ -928,9 +928,6 @@ export default function AdminPanel() {
               label="Sem Bíblia"
             />
           )}
-          {/* {canViewTab('banners') && <SidebarButton active={activeTab === 'banners'} onClick={() => { setActiveTab('banners'); setIsSidebarOpen(false); }} icon={<ImageIcon size={20} />} label="Banners" />} */}
-          {/* canViewTab('lives') && <SidebarButton active={activeTab === 'lives'} onClick={() => { setActiveTab('lives'); setIsSidebarOpen(false); }} icon={<Radio size={20} />} label="Lives" /> */}
-          {/* canViewTab('events') && <SidebarButton active={activeTab === 'events'} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }} icon={<Calendar size={20} />} label="Eventos" /> */}
           {canViewTab("prayers") && (
             <SidebarButton
               active={activeTab === "prayers"}
@@ -954,6 +951,14 @@ export default function AdminPanel() {
             />
           )}
           {/* {canViewTab('team') && <SidebarButton active={activeTab === 'team'} onClick={openTeamTab} icon={<Users size={20} />} label="Equipe" />} */}
+          {canViewTab('settings') && (
+            <SidebarButton
+              active={activeTab === 'settings'}
+              onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
+              icon={<Settings size={20} />}
+              label="Configurações"
+            />
+          )}
         </nav>
         <div className="p-4 border-t border-white/10">
           <div className="px-4 py-2 mb-2">
