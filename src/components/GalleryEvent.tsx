@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Radio } from 'lucide-react';
+import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Radio, Download } from 'lucide-react';
 import { supabase } from '../supabase';
 
 interface EventGallery {
@@ -125,6 +125,24 @@ const GalleryEvent = () => {
 
   const formatDate = (dateStr: string) =>
     format(new Date(dateStr + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
+  const downloadPhoto = async (photo: GalleryPhoto, index: number) => {
+    try {
+      const res = await fetch(photo.public_url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const base = (event?.slug || 'foto').replace(/[^a-z0-9-]/gi, '-');
+      a.href = url;
+      a.download = `${base}-${String(index + 1).padStart(3, '0')}.webp`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(photo.public_url, '_blank');
+    }
+  };
 
   if (loading) {
     return (
@@ -277,6 +295,16 @@ const GalleryEvent = () => {
             className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
             onClick={() => setLightboxIndex(null)}
           >
+            {/* Download button */}
+            <button
+              className="absolute top-4 right-16 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-urban-yellow hover:text-urban-black transition-colors"
+              onClick={(e) => { e.stopPropagation(); downloadPhoto(photos[lightboxIndex], lightboxIndex); }}
+              aria-label="Baixar foto"
+              title="Baixar"
+            >
+              <Download size={22} />
+            </button>
+
             {/* Close button */}
             <button
               className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
