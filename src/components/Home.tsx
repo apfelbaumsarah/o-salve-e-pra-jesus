@@ -5,8 +5,8 @@ import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import fallbackBannerImageDesktop from '../../imagens/14.png';
-import mobileOverlayImage from '../../imagens/20.png';
+import fallbackBannerImageDesktop from '../../imagens/hero-desktop.png';
+import mobileOverlayImage from '../../imagens/hero-mobile.png';
 
 interface Banner {
   id: string;
