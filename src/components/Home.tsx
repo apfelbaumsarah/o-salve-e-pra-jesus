@@ -24,6 +24,15 @@ interface Event {
   description: string;
 }
 
+interface GalleryPhoto {
+  id: string;
+  public_url: string;
+  caption: string | null;
+}
+
+const GALLERY_SLUG = 'salve-pra-jesus-1-edicao';
+const GALLERY_EXTERNAL_URL = 'https://www.salveprajesus.org/galeria/salve-pra-jesus-1-edicao';
+
 const SCHEDULED_EVENT: Event = {
   id: 'evento-fixo-2026-04-21-14h',
   title: 'SALVE PRA JESUS',
@@ -37,6 +46,7 @@ const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [currentBanner, setCurrentBanner] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
 
   useEffect(() => {
     let metaDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
@@ -76,6 +86,22 @@ const Home = () => {
         .order('date', { ascending: true })
         .limit(3);
       setEvents(withScheduledEvent(eventsData || []));
+
+      const { data: galleryEvent } = await supabase
+        .from('events_gallery')
+        .select('id')
+        .eq('slug', GALLERY_SLUG)
+        .single();
+      if (galleryEvent?.id) {
+        const { data: photosData } = await supabase
+          .from('gallery_photos')
+          .select('id, public_url, caption')
+          .eq('event_id', galleryEvent.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        setGalleryPhotos(photosData || []);
+      }
+
       setLoading(false);
     };
     fetchData();
@@ -260,6 +286,49 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {galleryPhotos.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-20">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+            <div>
+              <h2 className="font-display text-5xl text-white mb-2">
+                <span className="text-urban-yellow">GALERIA</span>
+              </h2>
+              <p className="font-urban text-gray-400">Reviva os melhores momentos do SALVE pra Jesus.</p>
+            </div>
+            <a
+              href={GALLERY_EXTERNAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 transition-all font-urban uppercase text-sm tracking-widest"
+            >
+              Ver todas as fotos <ArrowRight size={18} />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            {galleryPhotos.slice(0, 5).map((photo, index) => (
+              <a
+                key={photo.id}
+                href={GALLERY_EXTERNAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`relative overflow-hidden rounded-xl group ${
+                  index === 0 ? 'col-span-2 md:col-span-2 md:row-span-2 aspect-square' : 'aspect-square'
+                }`}
+              >
+                <img
+                  loading="lazy"
+                  src={photo.public_url}
+                  alt={photo.caption ?? `Foto ${index + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-urban-yellow py-20 overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
