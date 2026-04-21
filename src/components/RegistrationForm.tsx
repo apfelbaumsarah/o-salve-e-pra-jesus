@@ -243,30 +243,6 @@ export default function RegistrationForm() {
             <div className="flex flex-col gap-3">
               <button
                 type="button"
-                onClick={() => setDecisionChoice('today')}
-                className={cn(
-                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
-                  decisionChoice === 'today' 
-                    ? "bg-urban-yellow border-urban-yellow text-urban-black" 
-                    : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
-                )}
-              >
-                <span>ENTREGUEI MINHA VIDA A JESUS HOJE</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDecisionChoice('knowing')}
-                className={cn(
-                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
-                  decisionChoice === 'knowing' 
-                    ? "bg-urban-yellow border-urban-yellow text-urban-black" 
-                    : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
-                )}
-              >
-                <span>AINDA ESTOU CONHECENDO E QUERO SABER MAIS</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => setDecisionChoice('already')}
                 className={cn(
                   "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
@@ -279,6 +255,18 @@ export default function RegistrationForm() {
               </button>
               <button
                 type="button"
+                onClick={() => setDecisionChoice('today')}
+                className={cn(
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
+                  decisionChoice === 'today'
+                    ? "bg-urban-yellow border-urban-yellow text-urban-black"
+                    : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
+                )}
+              >
+                <span>ENTREGUEI MINHA VIDA A JESUS HOJE</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setDecisionChoice('returning')}
                 className={cn(
                   "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
@@ -288,6 +276,18 @@ export default function RegistrationForm() {
                 )}
               >
                 <span>JÁ CAMINHEI COM JESUS E QUERO VOLTAR</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDecisionChoice('knowing')}
+                className={cn(
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
+                  decisionChoice === 'knowing'
+                    ? "bg-urban-yellow border-urban-yellow text-urban-black"
+                    : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
+                )}
+              >
+                <span>AINDA ESTOU CONHECENDO E QUERO SABER MAIS</span>
               </button>
             </div>
           </div>

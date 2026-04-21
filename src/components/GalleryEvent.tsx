@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Radio, Download } from 'lucide-react';
 import { supabase } from '../supabase';
+
+const PAGE_SIZE = 24;
 
 interface EventGallery {
   id: string;
@@ -33,14 +35,29 @@ const GalleryEvent = () => {
   const [event, setEvent] = useState<EventGallery | null>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [realtimeActive, setRealtimeActive] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     if (slug) fetchEventAndPhotos(slug);
   }, [slug]);
+
+  const fetchPage = async (eventId: string, from: number) => {
+    const to = from + PAGE_SIZE - 1;
+    const { data, count } = await supabase
+      .from('gallery_photos')
+      .select('*', { count: 'exact' })
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    return { data: data ?? [], count: count ?? 0 };
+  };
 
   const fetchEventAndPhotos = async (eventSlug: string) => {
     setLoading(true);
@@ -60,15 +77,39 @@ const GalleryEvent = () => {
 
     setEvent(ev);
 
-    const { data: photoData } = await supabase
-      .from('gallery_photos')
-      .select('*')
-      .eq('event_id', ev.id)
-      .order('created_at', { ascending: false });
-
-    setPhotos(photoData ?? []);
+    const { data, count } = await fetchPage(ev.id, 0);
+    setPhotos(data);
+    setTotalCount(count);
+    setHasMore(data.length < count);
     setLoading(false);
   };
+
+  const loadMore = useCallback(async () => {
+    if (!event || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const { data, count } = await fetchPage(event.id, photos.length);
+    setPhotos((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const merged = [...prev, ...data.filter((p) => !seen.has(p.id))];
+      setHasMore(merged.length < count);
+      setTotalCount(count);
+      return merged;
+    });
+    setLoadingMore(false);
+  }, [event, loadingMore, hasMore, photos.length]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: '400px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, loadMore]);
 
   // Realtime subscription — only after event is resolved
   useEffect(() => {
@@ -85,7 +126,11 @@ const GalleryEvent = () => {
           filter: `event_id=eq.${event.id}`,
         },
         (payload) => {
-          setPhotos((prev) => [payload.new as GalleryPhoto, ...prev]);
+          setPhotos((prev) => {
+            if (prev.some((p) => p.id === (payload.new as GalleryPhoto).id)) return prev;
+            return [payload.new as GalleryPhoto, ...prev];
+          });
+          setTotalCount((c) => c + 1);
         }
       )
       .on(
@@ -97,7 +142,11 @@ const GalleryEvent = () => {
           filter: `event_id=eq.${event.id}`,
         },
         (payload) => {
-          setPhotos((prev) => prev.filter((p) => p.id !== (payload.old as any).id));
+          setPhotos((prev) => {
+            const next = prev.filter((p) => p.id !== (payload.old as any).id);
+            if (next.length !== prev.length) setTotalCount((c) => Math.max(0, c - 1));
+            return next;
+          });
         }
       )
       .subscribe((status) => {
@@ -225,7 +274,7 @@ const GalleryEvent = () => {
               )}
 
               <span className="font-urban text-gray-600 text-sm">
-                {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+                {totalCount} {totalCount === 1 ? 'foto' : 'fotos'}
               </span>
 
               {realtimeActive && (
@@ -279,6 +328,18 @@ const GalleryEvent = () => {
                 />
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {hasMore && (
+          <div ref={sentinelRef} className="flex justify-center py-10">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="px-6 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-urban uppercase text-sm tracking-widest"
+            >
+              {loadingMore ? 'Carregando...' : `Carregar mais (${totalCount - photos.length})`}
+            </button>
           </div>
         )}
       </section>

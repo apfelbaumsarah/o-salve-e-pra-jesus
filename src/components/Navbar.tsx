@@ -41,6 +41,7 @@ const Navbar = () => {
     { name: 'Oração', path: '/oracao' },
     { name: 'Voluntários', path: '/voluntarios' },
     { name: 'Arrecadação', path: '/arrecadacao' },
+    { name: 'Galeria', path: '/galeria/salve-pra-jesus-1-edicao' },
     { name: 'O SALVE', path: '/cadastro' },
   ];
 
