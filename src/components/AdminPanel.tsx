@@ -2584,21 +2584,21 @@ export default function AdminPanel() {
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }} 
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm px-4"
+                className="fixed inset-0 z-[100] flex items-start md:items-center justify-center bg-black/90 backdrop-blur-sm px-2 md:px-4 py-4 overflow-y-auto"
                 onClick={() => setSelectedRegistration(null)}
               >
-                <motion.div 
-                  initial={{ scale: 0.9, y: 20 }} 
-                  animate={{ scale: 1, y: 0 }} 
-                  exit={{ scale: 0.9, y: 20 }} 
-                  className="bg-urban-gray rounded-3xl max-w-2xl w-full border border-white/10 overflow-hidden shadow-2xl"
+                <motion.div
+                  initial={{ scale: 0.95, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 20 }}
+                  className="bg-urban-gray rounded-2xl md:rounded-3xl max-w-2xl w-full border border-white/10 overflow-hidden shadow-2xl my-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="p-8 border-b border-white/10 flex justify-between items-start bg-gradient-to-r from-urban-black to-transparent">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
+                  <div className="p-4 md:p-8 border-b border-white/10 flex justify-between items-start gap-3 bg-gradient-to-r from-urban-black to-transparent">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
                         <div className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                          "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
                           selectedRegistration.accepted_jesus ? "bg-[#00FF66]/10 text-[#00FF66]" : "bg-urban-yellow/10 text-urban-yellow"
                         )}>
                           CADASTRO #{selectedRegistration.id.slice(0, 8)}
@@ -2609,17 +2609,17 @@ export default function AdminPanel() {
                           </div>
                         )}
                       </div>
-                      <h2 className="font-display text-5xl text-white leading-none">{selectedRegistration.name}</h2>
+                      <h2 className="font-display text-2xl md:text-5xl text-white leading-tight md:leading-none break-words">{selectedRegistration.name}</h2>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setSelectedRegistration(null)}
-                      className="p-2 hover:bg-white/5 rounded-xl text-gray-500 hover:text-white transition-colors"
+                      className="shrink-0 p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors"
                     >
                       <X size={24} />
                     </button>
                   </div>
 
-                  <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  <div className="p-4 md:p-8 space-y-4 md:space-y-6">
 
                     {/* === CRM: Status + Notas === */}
                     {(activeTab === 'registrations' || activeTab === 'volunteers' || activeTab === 'crm_pipeline') && (
@@ -2761,11 +2761,11 @@ export default function AdminPanel() {
                   )}
                   </div>
 
-                  <div className="p-6 bg-urban-black border-t border-white/5 flex gap-4">
+                  <div className="p-4 md:p-6 bg-urban-black border-t border-white/5 flex gap-3">
                     <a
                       href={`https://wa.me/55${selectedRegistration.whatsapp?.replace(/\D/g, '')}`}
                       target="_blank"
-                      className="flex-1 flex items-center justify-center gap-2 py-4 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#20ba59] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]"
+                      className="flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-[#25D366] text-white font-bold text-sm md:text-base rounded-xl hover:bg-[#20ba59] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]"
                     >
                       <MessageCircle size={20} /> CHAMAR NO WHATSAPP
                     </a>
