@@ -251,7 +251,7 @@ export default function RegistrationForm() {
                     : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
                 )}
               >
-                <span>TOMEI MINHA DECISÃO E ENTREGUEI MINHA VIDA A JESUS HOJE</span>
+                <span>ENTREGUEI MINHA VIDA A JESUS HOJE</span>
               </button>
               <button
                 type="button"
