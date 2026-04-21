@@ -1,0 +1,342 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Link, useParams } from 'react-router-dom';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Radio } from 'lucide-react';
+import { supabase } from '../supabase';
+
+interface EventGallery {
+  id: string;
+  name: string;
+  slug: string;
+  event_date: string | null;
+  cover_photo_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface GalleryPhoto {
+  id: string;
+  event_id: string;
+  storage_path: string;
+  public_url: string;
+  caption: string | null;
+  width: number | null;
+  height: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+const GalleryEvent = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const [event, setEvent] = useState<EventGallery | null>(null);
+  const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [realtimeActive, setRealtimeActive] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (slug) fetchEventAndPhotos(slug);
+  }, [slug]);
+
+  const fetchEventAndPhotos = async (eventSlug: string) => {
+    setLoading(true);
+    setNotFound(false);
+
+    const { data: ev, error: evError } = await supabase
+      .from('events_gallery')
+      .select('*')
+      .eq('slug', eventSlug)
+      .single();
+
+    if (evError || !ev) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    setEvent(ev);
+
+    const { data: photoData } = await supabase
+      .from('gallery_photos')
+      .select('*')
+      .eq('event_id', ev.id)
+      .order('created_at', { ascending: false });
+
+    setPhotos(photoData ?? []);
+    setLoading(false);
+  };
+
+  // Realtime subscription — only after event is resolved
+  useEffect(() => {
+    if (!event) return;
+
+    const channel = supabase
+      .channel(`public-gallery-${event.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'gallery_photos',
+          filter: `event_id=eq.${event.id}`,
+        },
+        (payload) => {
+          setPhotos((prev) => [payload.new as GalleryPhoto, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'gallery_photos',
+          filter: `event_id=eq.${event.id}`,
+        },
+        (payload) => {
+          setPhotos((prev) => prev.filter((p) => p.id !== (payload.old as any).id));
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeActive(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [event]);
+
+  // Lightbox keyboard navigation
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null);
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i !== null ? Math.min(i + 1, photos.length - 1) : null));
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i !== null ? Math.max(i - 1, 0) : null));
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxIndex, photos.length]);
+
+  const formatDate = (dateStr: string) =>
+    format(new Date(dateStr + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-urban-black pt-20 flex items-center justify-center">
+        <div className="space-y-4 w-full max-w-7xl mx-auto px-4 py-16">
+          <div className="h-16 bg-white/5 rounded-xl animate-pulse w-1/2" />
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-3 mt-8">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="break-inside-avoid mb-3 rounded-lg bg-white/5 animate-pulse"
+                style={{ height: `${150 + (i % 3) * 60}px` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-urban-black pt-20 flex items-center justify-center">
+        <div className="text-center px-4">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+            <ImageIcon size={36} className="text-gray-600" />
+          </div>
+          <h1 className="font-display text-4xl text-white uppercase tracking-wide mb-3">
+            Evento nao encontrado
+          </h1>
+          <p className="font-urban text-gray-500 mb-8">
+            O evento que voce buscou nao existe ou foi removido.
+          </p>
+          <Link
+            to="/galeria"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 transition-colors font-urban uppercase text-sm tracking-widest"
+          >
+            <ArrowLeft size={16} /> Voltar para Galeria
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-urban-black pt-20">
+      {/* Header */}
+      <section className="relative bg-urban-gray border-b border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-urban-yellow/5 blur-3xl opacity-20 rounded-full scale-150" />
+        <div className="max-w-7xl mx-auto px-4 py-16 relative z-10">
+          {/* Breadcrumb */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Link
+              to="/galeria"
+              className="inline-flex items-center gap-2 font-urban text-sm text-gray-500 hover:text-urban-yellow transition-colors uppercase tracking-widest mb-8"
+            >
+              <ArrowLeft size={14} /> Galeria
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-4"
+          >
+            <h1 className="font-display text-5xl md:text-7xl text-white leading-none tracking-tighter uppercase">
+              {event?.name}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-4">
+              {event?.event_date && (
+                <span className="font-urban text-gray-400 text-sm capitalize">
+                  {formatDate(event.event_date)}
+                </span>
+              )}
+
+              <span className="font-urban text-gray-600 text-sm">
+                {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+              </span>
+
+              {realtimeActive && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold rounded-full font-urban uppercase tracking-wider">
+                  <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                  AO VIVO
+                </span>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Photos */}
+      <section className="max-w-7xl mx-auto px-4 py-12">
+        {photos.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-24"
+          >
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+              <ImageIcon size={36} className="text-gray-600" />
+            </div>
+            <p className="font-display text-2xl text-gray-500 uppercase tracking-wide">
+              Em breve as fotos deste evento aparecerao aqui.
+            </p>
+            {realtimeActive && (
+              <p className="font-urban text-gray-600 mt-3 flex items-center justify-center gap-2">
+                <Radio size={14} className="text-red-400" />
+                Conectado em tempo real — novas fotos aparecerao automaticamente.
+              </p>
+            )}
+          </motion.div>
+        ) : (
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-3">
+            {photos.map((photo, index) => (
+              <motion.div
+                key={photo.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="break-inside-avoid mb-3"
+              >
+                <img
+                  loading="lazy"
+                  src={photo.public_url}
+                  alt={photo.caption ?? `Foto ${index + 1}`}
+                  className="w-full rounded-lg cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-urban-yellow/50 transition-all duration-200"
+                  onClick={() => setLightboxIndex(index)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <motion.div
+            key="lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
+            onClick={() => setLightboxIndex(null)}
+          >
+            {/* Close button */}
+            <button
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
+              aria-label="Fechar"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Previous */}
+            {lightboxIndex > 0 && (
+              <button
+                className="absolute left-4 z-10 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null ? i - 1 : null)); }}
+                aria-label="Foto anterior"
+              >
+                <ChevronLeft size={28} />
+              </button>
+            )}
+
+            {/* Next */}
+            {lightboxIndex < photos.length - 1 && (
+              <button
+                className="absolute right-4 z-10 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null ? i + 1 : null)); }}
+                aria-label="Proxima foto"
+              >
+                <ChevronRight size={28} />
+              </button>
+            )}
+
+            {/* Image */}
+            <motion.img
+              key={lightboxIndex}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              src={photos[lightboxIndex].public_url}
+              alt={photos[lightboxIndex].caption ?? `Foto ${lightboxIndex + 1}`}
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Caption + counter */}
+            <div className="absolute bottom-4 left-0 right-0 text-center space-y-1 pointer-events-none">
+              {photos[lightboxIndex].caption && (
+                <p className="font-urban text-sm text-gray-300 px-4">
+                  {photos[lightboxIndex].caption}
+                </p>
+              )}
+              <p className="font-urban text-xs text-gray-600 uppercase tracking-widest">
+                {lightboxIndex + 1} / {photos.length}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default GalleryEvent;

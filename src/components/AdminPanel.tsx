@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import imageCompression from 'browser-image-compression';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -26,10 +27,10 @@ import {
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
-type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers';
+type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers' | 'events_gallery';
 
-const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings'];
-const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team'];
+const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings', 'events_gallery'];
+const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team', 'events_gallery'];
 
 interface AdminDonutProps {
   labels: string[];
@@ -132,7 +133,7 @@ export default function AdminPanel() {
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [memberPassword, setMemberPassword] = useState('');
 
-  type UserProfile = { role: 'super_admin' | 'admin' | 'igreja'; church_id: string | null; church_name: string | null };
+  type UserProfile = { role: 'super_admin' | 'admin' | 'igreja' | 'editor'; church_id: string | null; church_name: string | null };
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -148,6 +149,15 @@ export default function AdminPanel() {
     instagram_url: '',
     youtube_url: ''
   });
+
+  // Events Gallery state
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventPhotos, setEventPhotos] = useState<any[]>([]);
+  const [uploadQueue, setUploadQueue] = useState<{ id: string; file: File; progress: number; status: 'pending' | 'compressing' | 'uploading' | 'done' | 'error' }[]>([]);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [newEventName, setNewEventName] = useState('');
+  const [newEventDate, setNewEventDate] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -210,17 +220,20 @@ export default function AdminPanel() {
   const canViewTab = (tab: Tab) => {
     if (!userProfile) return false;
     if (userProfile.role === 'super_admin' || userProfile.role === 'admin') return true;
+    if (userProfile.role === 'editor') return tab === 'events_gallery';
     // igreja: only pipeline and prayers
     return tab === 'prayers' || tab === 'crm_pipeline';
   };
   const canEditTab = (tab: Tab) => {
     if (!userProfile) return false;
     if (userProfile.role === 'super_admin' || userProfile.role === 'admin') return true;
+    if (userProfile.role === 'editor') return tab === 'events_gallery';
     // igreja can edit registrations (via pipeline/modal) and prayers
     return tab === 'prayers' || tab === 'crm_pipeline' || tab === 'registrations';
   };
   const canDeleteTab = (tab: Tab) => {
     if (!userProfile) return false;
+    if (userProfile.role === 'editor') return tab === 'events_gallery';
     // only super_admin and admin can delete; igreja never deletes
     return userProfile.role === 'super_admin' || userProfile.role === 'admin';
   };
@@ -231,9 +244,13 @@ export default function AdminPanel() {
   }, [activeTab]);
 
   // Redirect 'igreja' users away from dashboard (which they cannot see)
+  // Redirect 'editor' users to events_gallery
   useEffect(() => {
     if (userProfile?.role === 'igreja' && activeTab === 'dashboard') {
       setActiveTab('crm_pipeline');
+    }
+    if (userProfile?.role === 'editor' && activeTab !== 'events_gallery') {
+      setActiveTab('events_gallery');
     }
   }, [userProfile, activeTab]);
 
@@ -264,6 +281,11 @@ export default function AdminPanel() {
   };
 
   const loadTabData = async (tab: Tab) => {
+    if (tab === 'events_gallery') {
+      const { data: evts } = await supabase.from('events_gallery').select('*, gallery_photos(count)').order('created_at', { ascending: false });
+      setEvents(evts || []);
+      return;
+    }
     if (tab === 'crm_pipeline') {
       const { data: registrationsData } = await supabase
         .from('registrations')
@@ -392,6 +414,18 @@ export default function AdminPanel() {
         supabase.removeChannel(channelReg);
         supabase.removeChannel(channelDed);
       };
+    } else if (activeTab === 'events_gallery') {
+      const channel = supabase
+        .channel('admin-events_gallery')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events_gallery' }, () => {
+          loadTabData('events_gallery');
+        })
+        .subscribe();
+
+      return () => {
+        isMounted = false;
+        supabase.removeChannel(channel);
+      };
     } else {
       const tableName = activeTab === 'settings'
         ? 'settings'
@@ -420,6 +454,46 @@ export default function AdminPanel() {
       setVolunteerStatusFilter('all');
     }
   }, [activeTab]);
+
+  // Load event photos + realtime when an event is selected
+  useEffect(() => {
+    if (!selectedEventId) {
+      setEventPhotos([]);
+      return;
+    }
+    let isMounted = true;
+    supabase
+      .from('gallery_photos')
+      .select('*')
+      .eq('event_id', selectedEventId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (isMounted) setEventPhotos(data || []);
+      });
+
+    const channel = supabase
+      .channel(`gallery-photos-${selectedEventId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'gallery_photos', filter: `event_id=eq.${selectedEventId}` },
+        (payload) => {
+          if (isMounted) setEventPhotos((prev) => [payload.new as any, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'gallery_photos', filter: `event_id=eq.${selectedEventId}` },
+        (payload) => {
+          if (isMounted) setEventPhotos((prev) => prev.filter((p) => p.id !== (payload.old as any).id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [selectedEventId]);
 
   // Close sidebar on ESC key (mobile)
   useEffect(() => {
@@ -530,6 +604,77 @@ export default function AdminPanel() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const createEvent = async () => {
+    if (!newEventName.trim()) return;
+    const slug = newEventName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const { data, error } = await supabase
+      .from('events_gallery')
+      .insert([{ name: newEventName.trim(), slug, event_date: newEventDate || null }])
+      .select()
+      .single();
+    if (!error && data) {
+      setEvents((prev) => [data, ...prev]);
+      setSelectedEventId(data.id);
+      setNewEventName('');
+      setNewEventDate('');
+      setIsCreatingEvent(false);
+    }
+  };
+
+  const uploadPhotos = async (files: File[]) => {
+    if (!selectedEventId) return;
+    for (const file of files) {
+      const id = crypto.randomUUID();
+      setUploadQueue((q) => [...q, { id, file, progress: 0, status: 'compressing' }]);
+      try {
+        const compressed = await imageCompression(file, {
+          maxSizeMB: 3,
+          maxWidthOrHeight: 2560,
+          useWebWorker: true,
+          fileType: 'image/webp',
+          initialQuality: 0.92,
+        });
+        setUploadQueue((q) => q.map((x) => (x.id === id ? { ...x, status: 'uploading', progress: 30 } : x)));
+        const path = `${selectedEventId}/${id}.webp`;
+        const { error: upErr } = await supabase.storage
+          .from('event-gallery')
+          .upload(path, compressed, { contentType: 'image/webp', upsert: false });
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = supabase.storage.from('event-gallery').getPublicUrl(path);
+        const dims = await new Promise<{ w: number; h: number }>((res) => {
+          const img = new Image();
+          img.onload = () => res({ w: img.naturalWidth, h: img.naturalHeight });
+          img.src = URL.createObjectURL(compressed);
+        });
+        await supabase.from('gallery_photos').insert([{
+          event_id: selectedEventId,
+          storage_path: path,
+          public_url: publicUrl,
+          width: dims.w,
+          height: dims.h,
+          uploaded_by: user?.email || null,
+        }]);
+        setUploadQueue((q) => q.map((x) => (x.id === id ? { ...x, status: 'done', progress: 100 } : x)));
+        setTimeout(() => setUploadQueue((q) => q.filter((x) => x.id !== id)), 1500);
+      } catch (err) {
+        console.error('Upload error:', err);
+        setUploadQueue((q) => q.map((x) => (x.id === id ? { ...x, status: 'error' } : x)));
+      }
+    }
+  };
+
+  const deletePhoto = async (photo: any) => {
+    if (!confirm('Remover esta foto?')) return;
+    await supabase.storage.from('event-gallery').remove([photo.storage_path]);
+    await supabase.from('gallery_photos').delete().eq('id', photo.id);
+    setEventPhotos((prev) => prev.filter((p) => p.id !== photo.id));
   };
 
   const uploadFile = async (file: File, bucket: string, path: string): Promise<string> => {
@@ -1171,6 +1316,14 @@ export default function AdminPanel() {
               label="Voluntários"
             />
           )}
+          {canViewTab('events_gallery') && (
+            <SidebarButton
+              active={activeTab === 'events_gallery'}
+              onClick={() => { setActiveTab('events_gallery'); setIsSidebarOpen(false); }}
+              icon={<Calendar size={20} />}
+              label="Eventos"
+            />
+          )}
           {/* {canViewTab('team') && <SidebarButton active={activeTab === 'team'} onClick={openTeamTab} icon={<Users size={20} />} label="Equipe" />} */}
           {canViewTab('settings') && (
             <SidebarButton
@@ -1490,6 +1643,219 @@ export default function AdminPanel() {
                 </div>
               );
             })()
+          ) : activeTab === 'events_gallery' && canViewTab('events_gallery') ? (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {/* Header */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                {selectedEventId ? (
+                  <>
+                    <button
+                      onClick={() => { setSelectedEventId(null); setEventPhotos([]); setUploadQueue([]); }}
+                      className="flex items-center gap-2 text-gray-400 hover:text-white font-bold transition-colors"
+                    >
+                      <span className="text-urban-yellow">&#8592;</span> Voltar para Eventos
+                    </button>
+                    <h3 className="text-white font-display text-2xl uppercase tracking-widest">
+                      {events.find((e) => e.id === selectedEventId)?.name || 'Evento'}
+                    </h3>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-white font-display text-2xl uppercase tracking-widest flex items-center gap-2">
+                      <Calendar size={24} className="text-urban-yellow" /> Galeria de Eventos
+                    </h3>
+                    {canEditTab('events_gallery') && (
+                      <button
+                        onClick={() => setIsCreatingEvent(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 transition-all street-border"
+                      >
+                        <Plus size={18} /> Novo Evento
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Create event form */}
+              {!selectedEventId && isCreatingEvent && (
+                <div className="street-card p-6 rounded-2xl border border-white/10 space-y-4">
+                  <h4 className="text-white font-display text-lg uppercase tracking-wide">Novo Evento</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Nome do Evento</label>
+                      <input
+                        type="text"
+                        value={newEventName}
+                        onChange={(e) => setNewEventName(e.target.value)}
+                        placeholder="Ex: Evento de Natal 2024"
+                        className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-500 text-xs font-bold uppercase mb-2">Data do Evento</label>
+                      <input
+                        type="date"
+                        value={newEventDate}
+                        onChange={(e) => setNewEventDate(e.target.value)}
+                        className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-3 text-white focus:border-urban-yellow outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={createEvent}
+                      disabled={!newEventName.trim()}
+                      className="px-6 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 transition-all disabled:opacity-50"
+                    >
+                      Criar Evento
+                    </button>
+                    <button
+                      onClick={() => { setIsCreatingEvent(false); setNewEventName(''); setNewEventDate(''); }}
+                      className="px-6 py-3 bg-white/5 text-gray-300 font-bold rounded-xl hover:bg-white/10 transition-all border border-white/10"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Events list */}
+              {!selectedEventId && (
+                isTabLoading ? (
+                  <div className="flex justify-center py-20">
+                    <Loader2 className="animate-spin h-10 w-10 text-urban-yellow" />
+                  </div>
+                ) : events.length === 0 ? (
+                  <div className="text-center py-24 border border-dashed border-white/10 rounded-2xl text-gray-500">
+                    <Calendar size={40} className="mx-auto mb-3 opacity-30" />
+                    <p className="font-urban">Nenhum evento criado ainda.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {events.map((ev) => {
+                      const photoCount = ev.gallery_photos?.[0]?.count ?? 0;
+                      return (
+                        <button
+                          key={ev.id}
+                          onClick={() => setSelectedEventId(ev.id)}
+                          className="street-card text-left p-5 rounded-2xl border border-white/10 hover:border-urban-yellow/40 hover:bg-urban-yellow/5 transition-all group"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="text-white font-display text-lg uppercase tracking-wide group-hover:text-urban-yellow transition-colors line-clamp-2">
+                              {ev.name}
+                            </h4>
+                            <span className="shrink-0 px-2 py-1 rounded-full text-xs font-bold bg-urban-yellow/10 text-urban-yellow border border-urban-yellow/20">
+                              {photoCount} {photoCount === 1 ? 'foto' : 'fotos'}
+                            </span>
+                          </div>
+                          {ev.event_date && (
+                            <p className="text-gray-500 text-xs font-urban">
+                              {format(new Date(ev.event_date + 'T00:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            </p>
+                          )}
+                          <p className="text-gray-600 text-[10px] font-urban mt-1">
+                            Criado em {format(new Date(ev.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+
+              {/* Event detail: upload + photo grid */}
+              {selectedEventId && (
+                <div className="space-y-6">
+                  {/* Drop zone */}
+                  {canEditTab('events_gallery') && (
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const files = Array.from(e.dataTransfer.files as FileList).filter((f: File) => f.type.startsWith('image/'));
+                        if (files.length) uploadPhotos(files);
+                      }}
+                      className="border-2 border-dashed border-white/20 rounded-2xl p-10 text-center hover:border-urban-yellow/50 transition-colors group cursor-pointer"
+                      onClick={() => document.getElementById('gallery-file-input')?.click()}
+                    >
+                      <ImageIcon size={40} className="mx-auto mb-3 text-gray-500 group-hover:text-urban-yellow transition-colors" />
+                      <p className="text-gray-400 font-urban font-bold">Arraste fotos aqui ou clique para selecionar</p>
+                      <p className="text-gray-600 text-xs mt-1">JPG, PNG, WEBP — múltiplas fotos permitidas</p>
+                      <input
+                        id="gallery-file-input"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from((e.target.files || []) as unknown as FileList) as File[];
+                          if (files.length) uploadPhotos(files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Upload queue */}
+                  {uploadQueue.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-gray-400 text-xs font-bold uppercase tracking-widest">Enviando...</h5>
+                      {uploadQueue.map((item) => (
+                        <div key={item.id} className="flex items-center gap-3 bg-urban-gray rounded-xl px-4 py-3 border border-white/10">
+                          <span className="text-xs text-gray-400 font-urban truncate flex-1">{item.file.name}</span>
+                          <span className={cn(
+                            'text-[10px] font-bold uppercase px-2 py-0.5 rounded-full',
+                            item.status === 'compressing' ? 'bg-blue-500/15 text-blue-400' :
+                            item.status === 'uploading' ? 'bg-urban-yellow/15 text-urban-yellow' :
+                            item.status === 'done' ? 'bg-green-500/15 text-green-400' :
+                            'bg-red-500/15 text-red-400'
+                          )}>
+                            {item.status === 'compressing' ? 'Comprimindo' :
+                             item.status === 'uploading' ? 'Enviando' :
+                             item.status === 'done' ? 'Concluído' : 'Erro'}
+                          </span>
+                          {(item.status === 'compressing' || item.status === 'uploading') && (
+                            <Loader2 size={14} className="animate-spin text-urban-yellow shrink-0" />
+                          )}
+                          {item.status === 'done' && <Check size={14} className="text-green-400 shrink-0" />}
+                          {item.status === 'error' && <X size={14} className="text-red-400 shrink-0" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Photos grid */}
+                  {eventPhotos.length === 0 && uploadQueue.length === 0 ? (
+                    <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl text-gray-500">
+                      <ImageIcon size={36} className="mx-auto mb-3 opacity-30" />
+                      <p className="font-urban text-sm">Nenhuma foto ainda. Envie a primeira!</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {eventPhotos.map((photo) => (
+                        <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden bg-urban-gray border border-white/10">
+                          <img
+                            src={photo.public_url}
+                            alt={photo.caption || 'Foto do evento'}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          {canDeleteTab('events_gallery') && (
+                            <button
+                              onClick={() => deletePhoto(photo)}
+                              className="absolute top-2 right-2 p-1.5 bg-black/70 text-red-400 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"
+                              title="Remover foto"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : activeTab === 'settings' && canViewTab('settings') ? (
             <motion.div
               initial={{ opacity: 0 }}
