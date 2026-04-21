@@ -21,7 +21,7 @@ export default function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [decisionChoice, setDecisionChoice] = useState<'today' | 'knowing' | 'already' | null>(null);
+  const [decisionChoice, setDecisionChoice] = useState<'today' | 'knowing' | 'already' | 'returning' | null>(null);
 
   const formatWhatsApp = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -61,7 +61,11 @@ export default function RegistrationForm() {
     setError('');
 
     try {
-      const finalData = { ...formData, accepted_jesus: decisionChoice === 'today' };
+      const finalData = {
+        ...formData,
+        accepted_jesus: decisionChoice === 'today' || decisionChoice === 'returning',
+        is_returning: decisionChoice === 'returning',
+      };
       const { error: supaError } = await supabase.from('registrations').insert([finalData]);
       if (supaError) throw supaError;
       setIsSuccess(true);
@@ -266,12 +270,24 @@ export default function RegistrationForm() {
                 onClick={() => setDecisionChoice('already')}
                 className={cn(
                   "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
-                  decisionChoice === 'already' 
-                    ? "bg-urban-yellow border-urban-yellow text-urban-black" 
+                  decisionChoice === 'already'
+                    ? "bg-urban-yellow border-urban-yellow text-urban-black"
                     : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
                 )}
               >
                 <span>JÁ CAMINHO COM JESUS (SOU CRISTÃO)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDecisionChoice('returning')}
+                className={cn(
+                  "w-full text-left px-6 py-4 rounded-xl font-bold transition-all border-2",
+                  decisionChoice === 'returning'
+                    ? "bg-urban-yellow border-urban-yellow text-urban-black"
+                    : "bg-urban-black border-white/10 text-gray-400 hover:border-urban-yellow"
+                )}
+              >
+                <span>JÁ CAMINHEI COM JESUS E QUERO VOLTAR</span>
               </button>
             </div>
           </div>

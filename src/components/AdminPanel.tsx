@@ -131,6 +131,9 @@ export default function AdminPanel() {
   const [hasAccess, setHasAccess] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [memberPassword, setMemberPassword] = useState('');
+
+  type UserProfile = { role: 'super_admin' | 'admin' | 'igreja'; church_id: string | null; church_name: string | null };
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isVerifyingDelete, setIsVerifyingDelete] = useState(false);
@@ -173,18 +176,28 @@ export default function AdminPanel() {
       }
 
       if (user.email === MAIN_ADMIN_EMAIL) {
+        setUserProfile({ role: 'super_admin', church_id: null, church_name: null });
         setHasAccess(true);
         setIsCheckingAccess(false);
         return;
       }
 
-      const { data: teamMember } = await supabase
+      const { data: row } = await supabase
         .from('team')
-        .select('email, active')
+        .select('email, role_type, church_id, churches(name)')
         .eq('email', user.email)
         .maybeSingle();
 
-      setHasAccess(Boolean(teamMember) && teamMember.active !== false);
+      if (row) {
+        setUserProfile({
+          role: (row.role_type as any) || 'admin',
+          church_id: row.church_id,
+          church_name: (row as any).churches?.name ?? null,
+        });
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+      }
       setIsCheckingAccess(false);
     };
 
@@ -193,15 +206,36 @@ export default function AdminPanel() {
   }, [user]);
 
   const isMainAdmin = user?.email === MAIN_ADMIN_EMAIL;
-  
-  const canViewTab = (tab: Tab) => true;
-  const canEditTab = (tab: Tab) => true;
-  const canDeleteTab = (tab: Tab) => true;
+
+  const canViewTab = (tab: Tab) => {
+    if (!userProfile) return false;
+    if (userProfile.role === 'super_admin' || userProfile.role === 'admin') return true;
+    // igreja: only pipeline and prayers
+    return tab === 'prayers' || tab === 'crm_pipeline';
+  };
+  const canEditTab = (tab: Tab) => {
+    if (!userProfile) return false;
+    if (userProfile.role === 'super_admin' || userProfile.role === 'admin') return true;
+    // igreja can edit registrations (via pipeline/modal) and prayers
+    return tab === 'prayers' || tab === 'crm_pipeline' || tab === 'registrations';
+  };
+  const canDeleteTab = (tab: Tab) => {
+    if (!userProfile) return false;
+    // only super_admin and admin can delete; igreja never deletes
+    return userProfile.role === 'super_admin' || userProfile.role === 'admin';
+  };
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
   useEffect(() => {
     setSearchTerm('');
   }, [activeTab]);
+
+  // Redirect 'igreja' users away from dashboard (which they cannot see)
+  useEffect(() => {
+    if (userProfile?.role === 'igreja' && activeTab === 'dashboard') {
+      setActiveTab('crm_pipeline');
+    }
+  }, [userProfile, activeTab]);
 
   // Live-preview: inject Google Font into <head> when on settings tab
   useEffect(() => {
@@ -1153,6 +1187,9 @@ export default function AdminPanel() {
             <p className="text-white text-xs truncate font-bold">
               {user.email}
             </p>
+            {userProfile?.role === 'igreja' && (
+              <p className="text-urban-yellow text-xs font-bold mt-1">{userProfile.church_name || 'Igreja'}</p>
+            )}
           </div>
           <button
             onClick={handleLogout}
@@ -1934,8 +1971,11 @@ export default function AdminPanel() {
                         <div className={cn("flex-grow min-w-0", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "overflow-visible" : "overflow-hidden")}>
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "whitespace-normal break-words leading-snug" : "truncate", activeTab === 'prayers' && item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
-                            {item.accepted_jesus && (
+                            {item.accepted_jesus && !item.is_returning && (
                               <span className="shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] text-[10px] font-bold rounded uppercase tracking-wider">Aceitou Jesus</span>
+                            )}
+                            {item.is_returning && (
+                              <span className="shrink-0 px-2 py-0.5 bg-orange-400/15 text-orange-300 text-[10px] font-bold rounded uppercase tracking-wider border border-orange-300/30">Retornando</span>
                             )}
                             {activeTab === 'registrations' && item.accepted_jesus === false && item.attends_church === false && (
                               <span className="shrink-0 px-3 py-1 bg-cyan-400/15 text-cyan-300 text-[11px] font-bold rounded-md uppercase tracking-wider border border-cyan-300/30 flex items-center gap-1.5">
@@ -2341,13 +2381,27 @@ export default function AdminPanel() {
                   </div>
 
                   <div className="p-6 bg-urban-black border-t border-white/5 flex gap-4">
-                    <a 
-                      href={`https://wa.me/55${selectedRegistration.whatsapp?.replace(/\D/g, '')}`} 
+                    <a
+                      href={`https://wa.me/55${selectedRegistration.whatsapp?.replace(/\D/g, '')}`}
                       target="_blank"
                       className="flex-1 flex items-center justify-center gap-2 py-4 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#20ba59] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]"
                     >
                       <MessageCircle size={20} /> CHAMAR NO WHATSAPP
                     </a>
+                    {canDeleteTab(activeTab === 'crm_pipeline' ? 'registrations' : activeTab) && (
+                      <button
+                        onClick={() => {
+                          setDeleteError('');
+                          setDeletePassword('');
+                          setItemToDelete(selectedRegistration.id);
+                          setSelectedRegistration(null);
+                        }}
+                        className="p-4 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                        title="Deletar registro"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               </motion.div>
@@ -2468,9 +2522,14 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 pt-0.5">
-        {item.accepted_jesus && (
+        {item.accepted_jesus && !item.is_returning && (
           <span className="text-[10px] px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] rounded-full uppercase font-bold border border-[#00FF66]/20">
             Aceitou Jesus
+          </span>
+        )}
+        {item.is_returning && (
+          <span className="text-[10px] px-2 py-0.5 bg-orange-400/15 text-orange-300 rounded-full uppercase font-bold border border-orange-300/30">
+            Retornando
           </span>
         )}
         {hasNoBibleFn(item) && (
