@@ -6,7 +6,7 @@ import {
   LogOut, LogIn, Users, Heart, Download, Search, Bell, UserPlus,
   Calendar, Phone, Image as ImageIcon, Radio, Plus,
   Trash2, Check, X, Pencil, AlertTriangle,
-  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns, ArrowUpRight
+  Loader2, LayoutDashboard, Menu as MenuIcon, Eye, EyeOff, MessageCircle, Info, ExternalLink, Mail, MapPin, HeartHandshake, User, Scissors, Box, BookOpen, GripVertical, Settings, Columns, ArrowUpRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
@@ -1540,30 +1540,30 @@ export default function AdminPanel() {
               ) as Record<string, number>;
               const totalVisible = pipelineBase.length;
               return (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                  <div className="rounded-3xl bg-urban-gray/80 border border-white/10 p-6 md:p-8 flex flex-col gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)]">
+                <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
+                  <div className="rounded-2xl md:rounded-3xl bg-urban-gray/80 border border-white/10 p-4 md:p-8 flex flex-col gap-3 md:gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)]">
                     <div>
-                      <h3 className="text-white font-display text-3xl uppercase tracking-wide mb-2">Acompanhamento de Discípulos</h3>
-                      <p className="text-gray-400 font-urban">Acompanhe cada pessoa que aceitou Jesus ou está conhecendo, do primeiro contato ao discipulado.</p>
+                      <h3 className="text-white font-display text-2xl md:text-3xl uppercase tracking-wide mb-1 md:mb-2 leading-tight">Acompanhamento de Discípulos</h3>
+                      <p className="text-gray-400 font-urban text-sm md:text-base">Acompanhe cada pessoa que aceitou Jesus ou está conhecendo, do primeiro contato ao discipulado.</p>
                     </div>
-                    <div className="flex flex-col md:flex-row gap-3 items-start md:items-center flex-wrap">
+                    <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center flex-wrap">
                       <div className="relative w-full md:w-96">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                         <input
                           type="text"
                           placeholder="Buscar nome, WhatsApp, cidade..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-12 pr-4 py-3 bg-urban-gray border border-white/10 rounded-xl text-white focus:border-urban-yellow/60 outline-none"
+                          className="w-full pl-11 pr-4 py-2.5 md:py-3 bg-urban-gray border border-white/10 rounded-xl text-white text-sm md:text-base focus:border-urban-yellow/60 outline-none"
                         />
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex gap-2 overflow-x-auto scrollbar-hidden -mx-1 px-1 md:flex-wrap md:overflow-visible md:mx-0 md:px-0">
                         {PIPELINE_FILTER_DEFS.map((fd) => (
                           <button
                             key={fd.key}
                             onClick={() => togglePipelineFilter(fd.key)}
                             className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-bold border transition-all",
+                              "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold border transition-all",
                               activePipelineFilters.includes(fd.key)
                                 ? "bg-urban-yellow text-urban-black border-urban-yellow"
                                 : "bg-white/5 text-gray-300 border-white/10 hover:border-urban-yellow/40 hover:text-white"
@@ -1576,14 +1576,21 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto scrollbar-hidden pb-2">
+                  {/* Dica mobile de scroll horizontal */}
+                  <div className="md:hidden flex items-center justify-center gap-2 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                    <ChevronLeft size={14} />
+                    <span>Deslize para ver todas as etapas</span>
+                    <ChevronRight size={14} />
+                  </div>
+
+                  <div className="-mx-4 md:mx-0 overflow-x-auto scrollbar-hidden pb-2 snap-x snap-mandatory md:snap-none scroll-px-4">
                     <DndContext
                       sensors={pipelineSensors}
                       collisionDetection={closestCorners}
                       onDragStart={handleDndDragStart}
                       onDragEnd={handleDndDragEnd}
                     >
-                      <div className="grid grid-flow-col auto-cols-[min(88vw,320px)] gap-4">
+                      <div className="grid grid-flow-col auto-cols-[82vw] md:auto-cols-[320px] gap-3 md:gap-4 px-4 md:px-0">
                         {stageKeys.map((stageKey) => {
                           const totalForStage = stageTotals[stageKey];
                           const cards = pipelineFiltered.filter((item: any) => getPipelineStage(item) === stageKey);
@@ -1591,11 +1598,11 @@ export default function AdminPanel() {
                           return (
                             <div
                               key={stageKey}
-                              className="rounded-3xl p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]"
+                              className="snap-start rounded-2xl md:rounded-3xl p-3 md:p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]"
                             >
-                              <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-display text-xl text-white tracking-wide uppercase">{stageCfg.label}</h4>
-                                <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold border', stageCfg.color)}>
+                              <div className="flex items-center justify-between mb-3 md:mb-4 sticky top-0 bg-urban-gray/75 backdrop-blur-sm -mx-3 md:-mx-4 px-3 md:px-4 py-2 rounded-t-2xl md:rounded-t-3xl z-10">
+                                <h4 className="font-display text-lg md:text-xl text-white tracking-wide uppercase truncate pr-2">{stageCfg.label}</h4>
+                                <span className={cn('shrink-0 px-2.5 py-1 rounded-full text-xs font-bold border', stageCfg.color)}>
                                   {isFiltering ? `${cards.length}/${totalForStage}` : totalForStage}
                                 </span>
                               </div>
