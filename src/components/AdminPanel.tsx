@@ -1183,6 +1183,7 @@ export default function AdminPanel() {
   const naoTemBiblia = rangedData.filter((d) => hasNoBible(d)).length;
   const aindaConhecendo = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
   const jaCaminha = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
+  const querVoltar = rangedData.filter((d) => d.is_returning === true).length;
 
   const sourceRows = activeTab === 'team' ? teamRows : data;
 
@@ -1407,7 +1408,7 @@ export default function AdminPanel() {
               </div>
 
               {/* 6-card KPI grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                 {/* Total de Cadastros */}
                 <div
                   className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-urban-yellow hover:scale-[1.04] hover:bg-urban-yellow/5 transition-all"
@@ -1476,6 +1477,20 @@ export default function AdminPanel() {
                   <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
                   <p className="text-purple-400 font-urban text-xs uppercase font-bold mb-1">Conhecendo</p>
                   <p className="text-3xl text-white font-display">{aindaConhecendo}</p>
+                </div>
+
+                {/* Querem Voltar ao Pai */}
+                <div
+                  className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-orange-400 hover:scale-[1.04] hover:bg-orange-400/5 transition-all"
+                  onClick={() => { setActiveTab('registrations'); setFilterRegistrations('returning'); }}
+                  role="button"
+                  tabIndex={0}
+                  title="Ver quem quer voltar ao Pai"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('returning'); } }}
+                >
+                  <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
+                  <p className="text-orange-400 font-urban text-xs uppercase font-bold mb-1">Retornando</p>
+                  <p className="text-3xl text-white font-display">{querVoltar}</p>
                 </div>
 
               </div>
