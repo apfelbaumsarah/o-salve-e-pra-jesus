@@ -102,7 +102,7 @@ export default function AdminPanel() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [isTabLoading, setIsTabLoading] = useState(false);
-  const [filterRegistrations, setFilterRegistrations] = useState<'all' | 'acceptedJesus' | 'attendsChurch' | 'hasBible' | 'noBible' | 'knowing' | 'wantsUpdates'>('all');
+  const [filterRegistrations, setFilterRegistrations] = useState<'all' | 'acceptedJesus' | 'attendsChurch' | 'hasBible' | 'noBible' | 'knowing' | 'wantsUpdates' | 'returning'>('all');
   const [volunteerAreaFilter, setVolunteerAreaFilter] = useState<string>('all');
   const [volunteerStatusFilter, setVolunteerStatusFilter] = useState<'all' | 'disponivel' | 'escalado' | 'inativo'>('all');
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
@@ -930,6 +930,7 @@ export default function AdminPanel() {
       knowing: (rows || []).filter((d: any) => d.accepted_jesus === false && d.attends_church === false).length,
       wantsUpdates: (rows || []).filter((d: any) => d.wants_updates === true).length,
       noBible: (rows || []).filter((d: any) => hasNoBible(d)).length,
+      returning: (rows || []).filter((d: any) => d.is_returning === true).length,
     };
   }, [activeTab, data, teamRows]);
 
@@ -1047,6 +1048,7 @@ export default function AdminPanel() {
         if (filterRegistrations === 'knowing') return item.accepted_jesus === false && item.attends_church === false;
         if (filterRegistrations === 'wantsUpdates') return item.wants_updates === true;
         if (filterRegistrations === 'noBible') return hasNoBible(item);
+        if (filterRegistrations === 'returning') return item.is_returning === true;
       }
       if (activeTab === 'volunteers') {
         if (volunteerAreaFilter !== 'all' && !item.how_to_help?.includes(volunteerAreaFilter)) return false;
@@ -1731,7 +1733,7 @@ export default function AdminPanel() {
               </AnimatePresence>
 
               <div className="grid grid-cols-1 gap-4">
-                {(activeTab === 'registrations' || activeTab === 'prayers') && (
+                {activeTab === 'registrations' && (userProfile?.role === 'super_admin' || userProfile?.role === 'admin') && (
                   <div className="flex flex-wrap gap-3 mb-2">
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('all'); }}
@@ -1750,6 +1752,12 @@ export default function AdminPanel() {
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'knowing' && activeTab === 'registrations') ? 'bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.4)]' : 'bg-white/5 border border-white/10 text-cyan-400 opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
                       <UserPlus size={16} /> Estão Conhecendo ({chipCounts.knowing})
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('registrations'); setFilterRegistrations('returning'); }}
+                      className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'returning' && activeTab === 'registrations') ? 'bg-orange-400 text-black shadow-[0_0_15px_rgba(251,146,60,0.4)]' : 'bg-white/5 border border-white/10 text-orange-300 opacity-70 hover:opacity-100 hover:bg-white/10')}
+                    >
+                      <Heart size={16} /> Retornando ({chipCounts.returning})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('wantsUpdates'); }}
