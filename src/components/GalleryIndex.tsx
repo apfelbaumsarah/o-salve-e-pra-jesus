@@ -166,7 +166,7 @@ const GalleryIndex = () => {
                   className="group block rounded-2xl overflow-hidden border border-white/10 bg-urban-gray hover:border-urban-yellow/50 hover:ring-2 hover:ring-urban-yellow/30 transition-all duration-300"
                 >
                   {/* Cover image */}
-                  <div className="relative h-52 overflow-hidden bg-black/40">
+                  <div className="relative h-52 overflow-hidden bg-black/40 md:bg-transparent">
                     {ev.cover_url ? (
                       <>
                         <div
@@ -197,7 +197,7 @@ const GalleryIndex = () => {
                       </div>
                     )}
                     {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-urban-gray via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-urban-gray via-transparent to-transparent opacity-80 md:from-transparent md:opacity-0" />
                   </div>
 
                   {/* Info */}

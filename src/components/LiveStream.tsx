@@ -13,11 +13,11 @@ interface Live {
   is_main: boolean;
 }
 
-const FEATURED_VIDEO_ID = 'Bqc6B5LzTN0';
+const FEATURED_VIDEO_ID = 'd0HzDBlF0t4';
 const FEATURED_VIDEO: Live = {
-  id: 'featured-video-bqc6b5lztN0',
+  id: 'featured-video-d0hzdblf0t4',
   youtube_id: FEATURED_VIDEO_ID,
-  title: 'O FOGO ARDERÁ AO VIVO - Alexsander Lucio',
+  title: 'Momentos O SALVE! é pra JESUS 1ª Edição | Concha Acústica',
   date: '',
   is_main: true,
 };
@@ -163,12 +163,14 @@ const LiveStream = () => {
             {mainLive && (
               <div className="mt-6">
                 <h2 className="font-display text-4xl text-white mb-2">{mainLive.title}</h2>
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Calendar size={18} />
-                  <span className="font-urban text-sm uppercase">
-                    {mainLive.date ? format(new Date(mainLive.date), "dd 'de' MMMM 'as' HH:mm", { locale: ptBR }) : 'Data em breve'}
-                  </span>
-                </div>
+                {mainLive.date && (
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Calendar size={18} />
+                    <span className="font-urban text-sm uppercase">
+                      {format(new Date(mainLive.date), "dd 'de' MMMM 'as' HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
