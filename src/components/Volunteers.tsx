@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { VolunteerModal } from './VolunteerModal';
+import { useNavigate } from 'react-router-dom';
 import volunteersImage from '../../imagens/10.png';
 
 const Volunteers = () => {
-  const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -121,7 +121,7 @@ const Volunteers = () => {
               </p>
               <div className="flex flex-col md:flex-row gap-3">
               <button
-                onClick={() => setIsVolunteerModalOpen(true)}
+                onClick={() => navigate('/cadastrovoluntario')}
                 className="px-8 py-4 bg-urban-yellow text-urban-black border-2 border-urban-yellow font-bold uppercase tracking-wider rounded-xl hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban street-border"
               >
                 QUERO CAMINHAR COM A SALVE
@@ -132,7 +132,6 @@ const Volunteers = () => {
         </div>
       </div>
 
-      <VolunteerModal isOpen={isVolunteerModalOpen} onClose={() => setIsVolunteerModalOpen(false)} />
     </div>
   );
 };

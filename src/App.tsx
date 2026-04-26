@@ -12,6 +12,7 @@ import FoodDonation from './components/FoodDonation';
 import AboutTheSalve from './components/AboutTheSalve';
 import Volunteers from './components/Volunteers';
 import VolunteerSignup from './components/VolunteerSignup';
+import CollectionSignup from './components/CollectionSignup';
 import GalleryIndex from './components/GalleryIndex';
 import GalleryEvent from './components/GalleryEvent';
 import { supabase } from './supabase';
@@ -71,6 +72,8 @@ function App() {
             <Route path="/oracao" element={<PrayerRequests />} />
             <Route path="/voluntarios" element={<Volunteers />} />
             <Route path="/quero-servir" element={<VolunteerSignup />} />
+            <Route path="/cadastrovoluntario" element={<VolunteerSignup />} />
+            <Route path="/coleta" element={<CollectionSignup />} />
             <Route path="/arrecadacao" element={<FoodDonation />} />
             <Route path="/qrcode" element={<QRCodeDisplay />} />
             <Route path="/historia" element={<AboutTheSalve />} />

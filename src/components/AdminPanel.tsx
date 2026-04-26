@@ -28,9 +28,9 @@ import {
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
-type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers' | 'events_gallery';
+type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' | 'events' | 'prayers' | 'team' | 'settings' | 'volunteers' | 'collection' | 'events_gallery';
 
-const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings', 'events_gallery'];
+const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings', 'volunteers', 'collection', 'events_gallery'];
 const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team', 'events_gallery'];
 
 interface AdminDonutProps {
@@ -278,6 +278,7 @@ export default function AdminPanel() {
   const getTableName = (tab: Tab) => {
     if (tab === 'prayers') return 'registrations';
     if (tab === 'volunteers') return 'volunteers';
+    if (tab === 'collection') return 'collection_signups';
     return tab;
   };
 
@@ -374,6 +375,8 @@ export default function AdminPanel() {
     } else if (tab === 'events') {
       query = query.order('date', { ascending: true });
     } else if (tab === 'volunteers') {
+      query = query.order('created_at', { ascending: false });
+    } else if (tab === 'collection') {
       query = query.order('created_at', { ascending: false });
     }
 
@@ -1012,8 +1015,10 @@ export default function AdminPanel() {
   const getVolunteerStatus = (item: any) => item?.volunteer_status || 'disponivel';
 
   const updateVolunteerStatus = async (id: string, nextStatus: string) => {
-    if (!canEditTab('volunteers')) return;
-    const { error } = await supabase.from('volunteers').update({ volunteer_status: nextStatus }).eq('id', id);
+    const targetTab: Tab = activeTab === 'collection' ? 'collection' : 'volunteers';
+    if (!canEditTab(targetTab)) return;
+    const tableName = getTableName(targetTab);
+    const { error } = await supabase.from(tableName).update({ volunteer_status: nextStatus }).eq('id', id);
     if (!error) {
       setData(prev => prev.map((r: any) => (r.id === id ? { ...r, volunteer_status: nextStatus } : r)));
     }
@@ -1043,6 +1048,36 @@ export default function AdminPanel() {
       .replace(/^\s+/, '')
       .trim();
     return { owner, notes: cleaned };
+  };
+
+  const getPipelineTimestamp = (item: any) => {
+    const updatedAt = item?.updated_at ? new Date(item.updated_at).getTime() : NaN;
+    if (Number.isFinite(updatedAt)) return updatedAt;
+    const createdAt = item?.created_at ? new Date(item.created_at).getTime() : NaN;
+    return Number.isFinite(createdAt) ? createdAt : 0;
+  };
+
+  const hasPipelineUpdate = (item: any) => {
+    const parsed = parseAdminNotes(item?.admin_notes);
+    const hasNotes = Boolean(parsed.owner || parsed.notes);
+    const movedFromNovo = item?.status && item.status !== 'novo';
+    const updatedAt = item?.updated_at ? new Date(item.updated_at).getTime() : NaN;
+    const createdAt = item?.created_at ? new Date(item.created_at).getTime() : NaN;
+    const hasTimestampUpdate =
+      Number.isFinite(updatedAt) &&
+      Number.isFinite(createdAt) &&
+      updatedAt > createdAt + 1000;
+
+    return hasNotes || movedFromNovo || hasTimestampUpdate;
+  };
+
+  const comparePipelineCards = (a: any, b: any) => {
+    const aHasUpdate = hasPipelineUpdate(a);
+    const bHasUpdate = hasPipelineUpdate(b);
+
+    // Sem atualização primeiro; mais atualizados ficam no final da coluna.
+    if (aHasUpdate !== bHasUpdate) return aHasUpdate ? 1 : -1;
+    return getPipelineTimestamp(a) - getPipelineTimestamp(b);
   };
 
   const buildAdminNotes = (owner: string, notes: string) => {
@@ -1132,7 +1167,9 @@ export default function AdminPanel() {
     if (!selectedRegistration) return;
     setIsSavingStatus(true);
     setSaveStatusMsg('idle');
-    const table = activeTab === 'volunteers' ? 'volunteers' : 'registrations';
+    const table = activeTab === 'volunteers' || activeTab === 'collection'
+      ? getTableName(activeTab)
+      : 'registrations';
     console.log('[CRM] Salvando status:', editingStatus, 'notas:', editingNotes, 'id:', selectedRegistration.id, 'tabela:', table);
     const { data: updated, error } = await supabase
       .from(table)
@@ -1420,6 +1457,17 @@ export default function AdminPanel() {
               }}
               icon={<HeartHandshake size={20} />}
               label="Voluntários"
+            />
+          )}
+          {canViewTab("collection") && (
+            <SidebarButton
+              active={activeTab === "collection"}
+              onClick={() => {
+                setActiveTab("collection");
+                setIsSidebarOpen(false);
+              }}
+              icon={<Box size={20} />}
+              label="Coleta"
             />
           )}
           {canViewTab('events_gallery') && (
@@ -1713,7 +1761,9 @@ export default function AdminPanel() {
                       <div className="grid grid-flow-col auto-cols-[82vw] md:auto-cols-[320px] lg:grid-flow-row lg:grid-cols-4 lg:auto-cols-auto gap-3 md:gap-4 px-4 lg:px-0">
                         {stageKeys.map((stageKey) => {
                           const totalForStage = stageTotals[stageKey];
-                          const cards = pipelineFiltered.filter((item: any) => getPipelineStage(item) === stageKey);
+                          const cards = pipelineFiltered
+                            .filter((item: any) => getPipelineStage(item) === stageKey)
+                            .sort(comparePipelineCards);
                           const stageCfg = STATUS_CONFIG[stageKey];
                           return (
                             <div
@@ -2121,7 +2171,7 @@ export default function AdminPanel() {
                     className="w-full pl-12 pr-4 py-3 bg-urban-gray border border-white/10 rounded-xl text-white focus:border-urban-yellow outline-none"
                   />
                 </div>
-                {activeTab !== 'registrations' && activeTab !== 'prayers' && activeTab !== 'volunteers' && canEditTab(activeTab) && (
+                {activeTab !== 'registrations' && activeTab !== 'prayers' && activeTab !== 'volunteers' && activeTab !== 'collection' && canEditTab(activeTab) && (
                   <button
                     onClick={isAdding ? handleCancelAdd : () => {
                       if (activeTab === 'team') resetTeamForm();
@@ -2133,7 +2183,7 @@ export default function AdminPanel() {
                     {isAdding ? <X size={20} /> : <Plus size={20} />} {isAdding ? 'CANCELAR' : 'ADICIONAR NOVO'}
                   </button>
                 )}
-                {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') && (
+                {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') && (
                   <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
 
                     <button
@@ -2452,7 +2502,7 @@ export default function AdminPanel() {
                         {/* activeTab === 'banners' && <img src={item.image_url} className="w-20 h-12 object-cover rounded-lg" /> */}
                         {activeTab === 'team' && <img src={item.photo_url} className="w-12 h-12 object-cover rounded-full" />}
                         {/* activeTab === 'lives' && <div className="w-12 h-12 bg-urban-yellow/10 rounded-xl flex items-center justify-center text-urban-yellow"><Radio size={24} /></div> */}
-                        {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') && (
+                        {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') && (
                           <div className={cn(
                             "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl relative shrink-0",
                             item.accepted_jesus ? "bg-[#00FF66]/20 text-[#00FF66] shadow-[0_0_10px_rgba(0,255,102,0.2)]" : "bg-urban-yellow/10 text-urban-yellow",
@@ -2469,9 +2519,9 @@ export default function AdminPanel() {
                             )}
                           </div>
                         )}
-                        <div className={cn("flex-grow min-w-0", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "overflow-visible" : "overflow-hidden")}>
+                        <div className={cn("flex-grow min-w-0", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') ? "overflow-visible" : "overflow-hidden")}>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? "whitespace-normal break-words leading-snug" : "truncate", activeTab === 'prayers' && item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
+                            <h4 className={cn("font-urban font-bold text-white text-lg min-w-0 max-w-full", (activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') ? "whitespace-normal break-words leading-snug" : "truncate", activeTab === 'prayers' && item.prayer_done && "text-gray-500 line-through")}>{item.title || item.name || 'Sem Título'}</h4>
                             {item.accepted_jesus && !item.is_returning && (
                               <span className="shrink-0 px-2 py-0.5 bg-[#00FF66]/10 text-[#00FF66] text-[10px] font-bold rounded uppercase tracking-wider">Aceitou Jesus</span>
                             )}
@@ -2503,7 +2553,7 @@ export default function AdminPanel() {
                               ) : null;
                             })()}
                             {/* Status badge — volunteers */}
-                            {activeTab === 'volunteers' && (() => {
+                            {(activeTab === 'volunteers' || activeTab === 'collection') && (() => {
                               const vst = getVolunteerStatus(item);
                               const vcfg = VOLUNTEER_STATUS_CONFIG[vst];
                               return vcfg ? (
@@ -2515,12 +2565,17 @@ export default function AdminPanel() {
                             })()}
                           </div>
                           <p className="text-gray-500 text-sm">
-                            {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') ? (
+                            {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') ? (
                               <span className={cn("flex flex-col gap-1", activeTab === 'prayers' && item.prayer_done && "opacity-50")}>
                                 <span className="flex items-center gap-2 flex-wrap">
                                   {item.whatsapp}
+                                  {item.instagram && (activeTab === 'registrations' || activeTab === 'volunteers' || activeTab === 'collection') && (
+                                    <span className="text-pink-300 text-xs italic shrink-0">
+                                      • IG: {item.instagram}
+                                    </span>
+                                  )}
                                   {item.prayer_request && activeTab === 'registrations' && <span className="text-blue-400 text-xs italic flex items-center gap-1 shrink-0">• <MessageCircle size={10} /> Tem pedido de oração</span>}
-                                  {activeTab === 'volunteers' && item.city && (
+                                  {(activeTab === 'volunteers' || activeTab === 'collection') && item.city && (
                                     <span className="text-gray-400 text-xs italic shrink-0">
                                       • {item.city}
                                       {item.age && <span> · {item.age} anos</span>}
@@ -2532,7 +2587,7 @@ export default function AdminPanel() {
                                     "{item.prayer_request}"
                                   </span>
                                 )}
-                                {activeTab === 'volunteers' && item.how_to_help && item.how_to_help.length > 0 && (
+                                {(activeTab === 'volunteers' || activeTab === 'collection') && item.how_to_help && item.how_to_help.length > 0 && (
                                   <span className="flex flex-wrap gap-1 mt-1">
                                     {(item.how_to_help as string[]).map((area) => (
                                       <span key={area} className="text-[11px] px-2 py-0.5 rounded-full bg-urban-yellow/15 text-urban-yellow border border-urban-yellow/20">
@@ -2563,7 +2618,7 @@ export default function AdminPanel() {
                               {item.active ? <Check size={20} /> : <X size={20} />}
                             </button>
                           ) */}
-                          {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers') && (
+                          {(activeTab === 'registrations' || activeTab === 'prayers' || activeTab === 'volunteers' || activeTab === 'collection') && (
                             <div className="flex items-center gap-2">
                               {activeTab === 'prayers' && (
                                 <button 
@@ -2627,7 +2682,7 @@ export default function AdminPanel() {
                                 </select>
                               )}
                               {/* Inline volunteer status select */}
-                              {activeTab === 'volunteers' && (
+                              {(activeTab === 'volunteers' || activeTab === 'collection') && (
                                 <select
                                   value={getVolunteerStatus(item)}
                                   onClick={(e) => e.stopPropagation()}
@@ -2645,7 +2700,7 @@ export default function AdminPanel() {
                               )}
                             </div>
                           )}
-                            {activeTab !== 'registrations' && activeTab !== 'prayers' && activeTab !== 'volunteers' && canEditTab(activeTab) && (
+                            {activeTab !== 'registrations' && activeTab !== 'prayers' && activeTab !== 'volunteers' && activeTab !== 'collection' && canEditTab(activeTab) && (
                               <button onClick={() => handleEdit(item)} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all">
                                 <Pencil size={20} />
                               </button>
@@ -2747,7 +2802,7 @@ export default function AdminPanel() {
                   <div className="p-4 md:p-8 space-y-4 md:space-y-6">
 
                     {/* === CRM: Status + Notas === */}
-                    {(activeTab === 'registrations' || activeTab === 'volunteers' || activeTab === 'crm_pipeline') && (
+                    {(activeTab === 'registrations' || activeTab === 'volunteers' || activeTab === 'collection' || activeTab === 'crm_pipeline') && (
                       <div className="space-y-4 p-5 bg-urban-black rounded-2xl border border-white/10">
                         <h4 className="text-white font-display text-lg tracking-widest uppercase">Acompanhamento</h4>
                         <div>
@@ -2804,10 +2859,11 @@ export default function AdminPanel() {
                     )}
 
                     {/* Exibe painel diferido caso seja um voluntário */}
-                    {activeTab === 'volunteers' ? (
+                    {(activeTab === 'volunteers' || activeTab === 'collection') ? (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <DetailItem icon={<MessageCircle className="text-green-500" />} label="WhatsApp" value={selectedRegistration.whatsapp} isCopy />
+                          <DetailItem icon={<ExternalLink className="text-pink-400" />} label="Instagram" value={selectedRegistration.instagram || 'Não informado'} isCopy={!!selectedRegistration.instagram} />
                           <DetailItem icon={<MapPin className="text-red-400" />} label="Cidade / Bairro" value={selectedRegistration.city || 'Não informado'} />
                           <DetailItem icon={<User className="text-blue-400" />} label="Idade" value={selectedRegistration.age || 'Não informado'} />
                           <DetailItem icon={<Calendar className="text-urban-yellow" />} label="Data do Cadastro" value={formatDate(selectedRegistration.created_at)} />
@@ -2857,6 +2913,7 @@ export default function AdminPanel() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <DetailItem icon={<MessageCircle className="text-green-500" />} label="WhatsApp" value={selectedRegistration.whatsapp} isCopy />
                           <DetailItem icon={<Mail className="text-blue-400" />} label="E-mail" value={selectedRegistration.email || 'Não informado'} isCopy={!!selectedRegistration.email} />
+                          <DetailItem icon={<ExternalLink className="text-pink-400" />} label="Instagram" value={selectedRegistration.instagram || 'Não informado'} isCopy={!!selectedRegistration.instagram} />
                           <DetailItem icon={<MapPin className="text-red-400" />} label="Cidade / Bairro" value={`${selectedRegistration.city || 'Não informado'} / ${selectedRegistration.neighborhood || ''}`} />
                           <DetailItem icon={<Users className="text-blue-500" />} label="Frequenta Igreja?" value={selectedRegistration.attends_church ? "Sim, frequenta" : "Não frequenta"} />
                           <DetailItem icon={<div className="font-bold text-xs">📖</div>} label="Contato com a Bíblia?" value={hasNoBible(selectedRegistration) ? "Não tem Bíblia" : "Sim, tem Bíblia"} />
@@ -3066,7 +3123,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[120px] space-y-2 max-h-[65vh] overflow-y-auto scrollbar-hidden pr-1 transition-colors rounded-xl",
+        "min-h-[120px] space-y-2 max-h-[65vh] overflow-y-auto pipeline-scrollbar pr-1 transition-colors rounded-xl",
         isOver ? "bg-urban-yellow/[0.04] ring-1 ring-urban-yellow/30" : ""
       )}
     >

@@ -7,16 +7,20 @@ const VolunteerSignup = () => {
 
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
-      <div className="max-w-3xl mx-auto text-center">
+      <div className="max-w-6xl mx-auto text-center mb-10">
         <h1 className="font-display text-5xl md:text-6xl text-white mb-3">
-          FORMULÁRIO DE <span className="text-urban-yellow">VOLUNTÁRIOS</span>
+          TEM LUGAR PRA <span className="text-urban-yellow">VOCÊ AQUI</span>
         </h1>
         <p className="font-urban text-gray-400 text-lg">
-          Preencha seu cadastro para servir com a SALVE.
+          Se o que você viveu com a Salve fez sentido pra você,
+          <br />
+          talvez seja hora de fazer parte disso.
         </p>
       </div>
 
-      <VolunteerModal isOpen={true} onClose={() => navigate('/voluntarios')} />
+      <div className="max-w-6xl mx-auto">
+        <VolunteerModal embedded onClose={() => navigate('/voluntarios')} />
+      </div>
     </div>
   );
 };

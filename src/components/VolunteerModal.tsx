@@ -35,7 +35,13 @@ const LOGISTICS_OPTIONS = [
   "Posso dar carona para voluntários/doações"
 ];
 
-export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+type VolunteerModalProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
+  embedded?: boolean;
+};
+
+export const VolunteerModal = ({ isOpen = false, onClose, embedded = false }: VolunteerModalProps) => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -45,6 +51,7 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [instagram, setInstagram] = useState('');
   
   const [howToHelp, setHowToHelp] = useState<string[]>([]);
   const [talents, setTalents] = useState<string[]>([]);
@@ -81,6 +88,7 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
         age,
         city,
         whatsapp,
+        instagram,
         how_to_help: howToHelp,
         talents: finalTalents,
         availability,
@@ -102,33 +110,40 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
   const resetAndClose = () => {
     setIsSuccess(false);
     setStep(1);
-    setName(''); setAge(''); setCity(''); setWhatsapp('');
+    setName(''); setAge(''); setCity(''); setWhatsapp(''); setInstagram('');
     setHowToHelp([]); setTalents([]); setOtherTalent('');
     setAvailability([]); setLogistics([]); setMotivation(''); setNotes('');
-    onClose();
+    onClose?.();
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {(embedded || isOpen) && (
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+          className={embedded ? 'w-full' : 'fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6'}
         >
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={isSuccess ? resetAndClose : onClose} />
+          {!embedded && (
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={isSuccess ? resetAndClose : onClose} />
+          )}
           
           <motion.div 
             initial={{ scale: 0.95, opacity: 0, y: 30 }} 
             animate={{ scale: 1, opacity: 1, y: 0 }} 
             exit={{ scale: 0.95, opacity: 0, y: 30 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-urban-black p-0 rounded-[2.5rem] w-full max-w-xl h-[85vh] max-h-[850px] relative z-10 border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+            className={cn(
+              "bg-urban-black p-0 rounded-[2.5rem] w-full relative border border-white/10 shadow-2xl flex flex-col overflow-hidden",
+              embedded ? "max-w-6xl mx-auto min-h-[76vh]" : "max-w-xl h-[85vh] max-h-[850px] z-10"
+            )}
           >
             {/* Header + Barra de Progresso */}
             <div className="pt-8 px-8 pb-4 bg-urban-gray relative shrink-0">
-              <button onClick={isSuccess ? resetAndClose : onClose} className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
-                <X size={20} />
-              </button>
+              {!embedded && (
+                <button onClick={isSuccess ? resetAndClose : onClose} className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
+                  <X size={20} />
+                </button>
+              )}
               
               {!isSuccess && (
                 <>
@@ -136,7 +151,7 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
                     <HeartHandshake size={20} />
                     <span className="font-urban font-bold text-xs tracking-widest uppercase">Cadastro</span>
                   </div>
-                  <h3 className="font-display text-4xl text-white">SOMA COM A GENTE</h3>
+                  <h3 className="font-display text-4xl text-white">FAZER PARTE</h3>
                   
                   {/* Progress Bar */}
                   <div className="w-full h-1 bg-white/10 mt-6 rounded-full overflow-hidden">
@@ -152,7 +167,7 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
+            <div className={cn("flex-1 overflow-y-auto custom-scrollbar", embedded ? "px-10 py-10 md:px-14" : "px-8 py-8")}>
               
               {/* === SUCCESS STATE === */}
               {isSuccess ? (
@@ -213,6 +228,11 @@ export const VolunteerModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
                       <div>
                         <label className="block text-gray-400 text-sm font-bold font-urban mb-2">DE ONDE VOCÊ É?</label>
                         <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Bairro / Cidade" className="w-full bg-urban-gray border border-white/5 rounded-xl px-5 py-4 text-white focus:border-urban-yellow focus:bg-white/5 outline-none transition-all font-urban text-lg" />
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-400 text-sm font-bold font-urban mb-2">SEU INSTAGRAM (OPCIONAL)</label>
+                        <input type="text" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@seuusuario" className="w-full bg-urban-gray border border-white/5 rounded-xl px-5 py-4 text-white focus:border-urban-yellow focus:bg-white/5 outline-none transition-all font-urban text-lg" />
                       </div>
 
                     </motion.div>
