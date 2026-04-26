@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
+import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../lib/utils';
@@ -865,16 +866,120 @@ export default function AdminPanel() {
 
   const exportToCSV = (rows: any[]) => {
     if (!rows.length) return;
+
+    const toCsvCell = (val: unknown) => {
+      const normalized = val == null ? '' : String(val);
+      return `"${normalized.replace(/"/g, '""')}"`;
+    };
+
+    const sanitizePdfText = (value: unknown) => {
+      const raw = String(value ?? '');
+      const withoutControls = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+      const withoutEmoji = withoutControls.replace(
+        /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0E}\u{FE0F}\u{200D}]/gu,
+        ''
+      );
+      const withoutUnsupported = withoutEmoji.replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+      return withoutUnsupported.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+    };
+
+    if (activeTab === 'prayers') {
+      const prayerRows = [...rows]
+        .filter((row) => String(row?.prayer_request || '').trim() !== '')
+        .sort((a, b) => {
+          const prayerDoneDiff = Number(!!a?.prayer_done) - Number(!!b?.prayer_done);
+          if (prayerDoneDiff !== 0) return prayerDoneDiff;
+          return new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime();
+        });
+
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginX = 48;
+      const marginTop = 56;
+      const marginBottom = 56;
+      const contentWidth = pageWidth - marginX * 2;
+      let y = marginTop;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('Lista de Orações', marginX, y);
+      y += 24;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, marginX, y);
+      doc.setTextColor(0, 0, 0);
+      y += 24;
+
+      prayerRows.forEach((row, idx) => {
+        const baseName = sanitizePdfText(row?.name || 'Sem nome') || 'Sem nome';
+        const actions: string[] = [];
+        const semBiblia =
+          row?.has_bible === false ||
+          row?.has_bible === 'false' ||
+          row?.has_bible === 0 ||
+          row?.has_bible === '0';
+        if (semBiblia) actions.push('SEM BIBLIA');
+        if (row?.attends_church === false) actions.push('SEM IGREJA');
+        if (row?.accepted_jesus === false && row?.attends_church === false) actions.push('ESTA CONHECENDO');
+        if (row?.is_returning === true) {
+          actions.push('RETORNANDO');
+        } else if (row?.accepted_jesus === true) {
+          actions.push('ACEITOU JESUS');
+        }
+        const actionSuffix = actions.map((a) => `[${a}]`).join(' ');
+        const name = actionSuffix ? `${baseName} ${actionSuffix}` : baseName;
+        const phoneRaw = sanitizePdfText(row?.whatsapp || row?.phone || '');
+        const phone = phoneRaw && phoneRaw.toUpperCase() !== 'N/A' ? phoneRaw : 'Sem telefone';
+        const parsedNotes = parseAdminNotes(typeof row?.admin_notes === 'string' ? row.admin_notes : '');
+        const ownerRaw = row?.responsavel || row?.responsible || row?.owner || row?.assigned_to || parsedNotes.owner || '';
+        const owner = sanitizePdfText(ownerRaw);
+        const contactLine = owner ? `Contato: ${phone} | Responsavel: ${owner}` : `Contato: ${phone}`;
+        const contactLines = doc.splitTextToSize(contactLine, contentWidth);
+        const prayer = sanitizePdfText(row?.prayer_request || '') || 'Sem oração informada.';
+        const prayerLines = doc.splitTextToSize(prayer, contentWidth);
+        const blockHeight = 20 + contactLines.length * 13 + 8 + prayerLines.length * 15 + 18;
+
+        if (y + blockHeight > pageHeight - marginBottom) {
+          doc.addPage();
+          y = marginTop;
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text(name, marginX, y);
+        y += 20;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(90, 90, 90);
+        doc.text(contactLines, marginX, y);
+        doc.setTextColor(0, 0, 0);
+        y += contactLines.length * 13 + 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(prayerLines, marginX, y);
+        y += prayerLines.length * 15 + 8;
+
+        if (idx < prayerRows.length - 1) {
+          doc.setDrawColor(205, 205, 205);
+          doc.setLineWidth(0.8);
+          doc.line(marginX, y, pageWidth - marginX, y);
+          y += 14;
+        }
+      });
+
+      doc.save(`oracoes_${format(new Date(), 'dd-MM-yyyy')}.pdf`);
+      return;
+    }
+
     const headers = Object.keys(rows[0]).filter((k) => k !== 'created_at');
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) =>
-        headers.map((header) => {
-          let val = row[header];
-          if (typeof val === 'string') val = val.replace(/"/g, '""');
-          return `"${val || ''}"`;
-        }).join(',')
-      )
+      ...rows.map((row) => headers.map((header) => toCsvCell(row[header])).join(',')),
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1011,8 +1116,8 @@ export default function AdminPanel() {
   };
 
   const PIPELINE_FILTER_DEFS: { key: string; label: string; fn: (item: any) => boolean }[] = [
-    { key: 'aceitaram', label: 'Aceitaram Jesus', fn: (item) => item.accepted_jesus === true },
-    { key: 'conhecendo', label: 'Estão conhecendo', fn: (item) => item.accepted_jesus === false && item.attends_church === false },
+    { key: 'aceitaram', label: 'Aceitaram Jesus (1a decisao)', fn: (item) => item.accepted_jesus === true && item.is_returning !== true },
+    { key: 'conhecendo', label: 'Estão conhecendo', fn: (item) => item.accepted_jesus === false && item.attends_church === false && item.is_returning !== true },
     { key: 'sem_biblia', label: 'Sem Bíblia', fn: (item) => hasNoBible(item) },
     { key: 'ultimos7', label: 'Últimos 7 dias', fn: (item) => new Date(item.created_at).getTime() >= Date.now() - 7 * 24 * 3600 * 1000 },
   ];
@@ -1071,8 +1176,8 @@ export default function AdminPanel() {
     const rows = activeTab === 'team' ? teamRows : data;
     return {
       all: (rows || []).length,
-      acceptedJesus: (rows || []).filter((d: any) => d.accepted_jesus === true).length,
-      knowing: (rows || []).filter((d: any) => d.accepted_jesus === false && d.attends_church === false).length,
+      acceptedJesus: (rows || []).filter((d: any) => d.accepted_jesus === true && d.is_returning !== true).length,
+      knowing: (rows || []).filter((d: any) => d.accepted_jesus === false && d.attends_church === false && d.is_returning !== true).length,
       wantsUpdates: (rows || []).filter((d: any) => d.wants_updates === true).length,
       noBible: (rows || []).filter((d: any) => hasNoBible(d)).length,
       returning: (rows || []).filter((d: any) => d.is_returning === true).length,
@@ -1176,13 +1281,13 @@ export default function AdminPanel() {
   }
 
   const totalCadastros = rangedData.length;
-  const aceitaramJesus = rangedData.filter((d) => d.accepted_jesus === true).length;
+  const aceitaramJesus = rangedData.filter((d) => d.accepted_jesus === true && d.is_returning !== true).length;
   const frequentamIgreja = rangedData.filter((d) => d.attends_church === true).length;
   const naoFrequentamIgreja = rangedData.filter((d) => d.attends_church === false).length;
   const temBiblia = rangedData.filter((d) => d.has_bible === true).length;
   const naoTemBiblia = rangedData.filter((d) => hasNoBible(d)).length;
-  const aindaConhecendo = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church === false).length;
-  const jaCaminha = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church !== false).length;
+  const aindaConhecendo = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church === false && d.is_returning !== true).length;
+  const jaCaminha = rangedData.filter((d) => d.accepted_jesus === false && d.attends_church !== false && d.is_returning !== true).length;
   const querVoltar = rangedData.filter((d) => d.is_returning === true).length;
 
   const sourceRows = activeTab === 'team' ? teamRows : data;
@@ -1190,8 +1295,8 @@ export default function AdminPanel() {
   const visibleData = (sourceRows || [])
     .filter((item) => {
       if (activeTab === 'registrations') {
-        if (filterRegistrations === 'acceptedJesus') return item.accepted_jesus === true;
-        if (filterRegistrations === 'knowing') return item.accepted_jesus === false && item.attends_church === false;
+        if (filterRegistrations === 'acceptedJesus') return item.accepted_jesus === true && item.is_returning !== true;
+        if (filterRegistrations === 'knowing') return item.accepted_jesus === false && item.attends_church === false && item.is_returning !== true;
         if (filterRegistrations === 'wantsUpdates') return item.wants_updates === true;
         if (filterRegistrations === 'noBible') return hasNoBible(item);
         if (filterRegistrations === 'returning') return item.is_returning === true;
@@ -1423,17 +1528,17 @@ export default function AdminPanel() {
                   <p className="text-3xl text-white font-display">{totalCadastros}</p>
                 </div>
 
-                {/* Aceitaram a Jesus */}
+                {/* Aceitaram a Jesus (1a decisao) */}
                 <div
                   className="street-card cursor-pointer relative p-4 rounded-2xl border-l-4 border-[#00FF66] hover:scale-[1.04] hover:bg-[#00FF66]/5 transition-all"
                   onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}
                   role="button"
                   tabIndex={0}
-                  title="Ver quem aceitou Jesus"
+                  title="Ver quem aceitou Jesus pela primeira vez"
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); } }}
                 >
                   <ArrowUpRight size={14} className="absolute top-3 right-3 text-gray-500" />
-                  <p className="text-[#00FF66] font-urban text-xs uppercase font-bold mb-1">Aceitaram</p>
+                  <p className="text-[#00FF66] font-urban text-xs uppercase font-bold mb-1">Aceitaram (1a)</p>
                   <p className="text-3xl text-white font-display">{aceitaramJesus}</p>
                 </div>
 
@@ -1500,9 +1605,9 @@ export default function AdminPanel() {
                 <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-urban-yellow/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}>
                   <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Decisão por Cristo</h3>
                   <AdminDonut
-                    labels={['Aceitaram', 'Conhecendo', 'Já Cristão/Outros']}
-                    values={[aceitaramJesus, aindaConhecendo, jaCaminha]}
-                    colors={['#FFE81F', '#00FF66', '#6B7280']}
+                    labels={['Aceitaram (1a)', 'Retornando', 'Conhecendo', 'Já Cristão/Outros']}
+                    values={[aceitaramJesus, querVoltar, aindaConhecendo, jaCaminha]}
+                    colors={['#00FF66', '#FB923C', '#A855F7', '#6B7280']}
                     centerLabel="Total"
                   />
                 </div>
@@ -1511,9 +1616,9 @@ export default function AdminPanel() {
                 <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-blue-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('attendsChurch'); }}>
                   <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Frequência Igreja</h3>
                   <AdminDonut
-                    labels={['Frequenta', 'Não Frequenta']}
+                    labels={['Frequenta', 'Sem Igreja']}
                     values={[frequentamIgreja, naoFrequentamIgreja]}
-                    colors={['#00D1FF', '#6B7280']}
+                    colors={['#6B7280', '#00D1FF']}
                     centerLabel="Total"
                   />
                 </div>
@@ -1522,9 +1627,9 @@ export default function AdminPanel() {
                 <div className="street-card cursor-pointer p-6 rounded-2xl hover:bg-purple-500/5 transition-all" onClick={() => { setActiveTab('registrations'); setFilterRegistrations('hasBible'); }}>
                   <h3 className="text-white font-display text-lg mb-4 text-center tracking-widest uppercase">Tem Bíblia?</h3>
                   <AdminDonut
-                    labels={['Não Tem', 'Tem Bíblia']}
+                    labels={['Sem Bíblia', 'Tem Bíblia']}
                     values={[naoTemBiblia, temBiblia]}
-                    colors={['#A855F7', '#6B7280']}
+                    colors={['#FFE81F', '#6B7280']}
                     centerLabel="Total"
                   />
                 </div>
@@ -1598,14 +1703,14 @@ export default function AdminPanel() {
                     <ChevronRight size={14} />
                   </div>
 
-                  <div className="-mx-4 md:mx-0 overflow-x-auto scrollbar-hidden pb-2 snap-x snap-mandatory md:snap-none scroll-px-4">
+                  <div className="-mx-4 lg:mx-0 overflow-x-auto lg:overflow-visible scrollbar-hidden pb-2 snap-x snap-mandatory lg:snap-none scroll-px-4 lg:scroll-px-0">
                     <DndContext
                       sensors={pipelineSensors}
                       collisionDetection={closestCorners}
                       onDragStart={handleDndDragStart}
                       onDragEnd={handleDndDragEnd}
                     >
-                      <div className="grid grid-flow-col auto-cols-[82vw] md:auto-cols-[320px] gap-3 md:gap-4 px-4 md:px-0">
+                      <div className="grid grid-flow-col auto-cols-[82vw] md:auto-cols-[320px] lg:grid-flow-row lg:grid-cols-4 lg:auto-cols-auto gap-3 md:gap-4 px-4 lg:px-0">
                         {stageKeys.map((stageKey) => {
                           const totalForStage = stageTotals[stageKey];
                           const cards = pipelineFiltered.filter((item: any) => getPipelineStage(item) === stageKey);
@@ -1613,7 +1718,7 @@ export default function AdminPanel() {
                           return (
                             <div
                               key={stageKey}
-                              className="snap-start rounded-2xl md:rounded-3xl p-3 md:p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]"
+                              className="snap-start min-w-0 rounded-2xl md:rounded-3xl p-3 md:p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]"
                             >
                               <div className="flex items-center justify-between mb-3 md:mb-4 sticky top-0 bg-urban-gray/75 backdrop-blur-sm -mx-3 md:-mx-4 px-3 md:px-4 py-2 rounded-t-2xl md:rounded-t-3xl z-10">
                                 <h4 className="font-display text-lg md:text-xl text-white tracking-wide uppercase truncate pr-2">{stageCfg.label}</h4>
@@ -2035,7 +2140,7 @@ export default function AdminPanel() {
                       onClick={() => exportToCSV(visibleData)}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-colors street-border"
                     >
-                      <Download size={20} /> EXPORTAR CSV
+                      <Download size={20} /> {activeTab === 'prayers' ? 'EXPORTAR PDF' : 'EXPORTAR CSV'}
                     </button>
                   </div>
                 )}
@@ -2133,7 +2238,7 @@ export default function AdminPanel() {
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('acceptedJesus'); }}
                       className={cn('px-5 py-2.5 rounded-full font-display tracking-widest uppercase text-sm transition-all flex items-center gap-2', (filterRegistrations === 'acceptedJesus' && activeTab === 'registrations') ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.4)]' : 'bg-white/5 border border-white/10 text-[#00FF66] opacity-70 hover:opacity-100 hover:bg-white/10')}
                     >
-                      <Heart size={16} /> Aceitaram a Jesus ({chipCounts.acceptedJesus})
+                      <Heart size={16} /> Aceitaram a Jesus (1a) ({chipCounts.acceptedJesus})
                     </button>
                     <button
                       onClick={() => { setActiveTab('registrations'); setFilterRegistrations('knowing'); }}
@@ -2618,9 +2723,14 @@ export default function AdminPanel() {
                         )}>
                           CADASTRO #{selectedRegistration.id.slice(0, 8)}
                         </div>
-                        {selectedRegistration.accepted_jesus && (
+                        {selectedRegistration.accepted_jesus && !selectedRegistration.is_returning && (
                           <div className="flex items-center gap-1 text-[#00FF66] font-bold text-[10px] uppercase tracking-widest">
                             <Heart size={12} fill="currentColor" /> ACEITOU JESUS
+                          </div>
+                        )}
+                        {selectedRegistration.is_returning && (
+                          <div className="flex items-center gap-1 text-orange-300 font-bold text-[10px] uppercase tracking-widest">
+                            <Heart size={12} fill="currentColor" /> RETORNANDO
                           </div>
                         )}
                       </div>

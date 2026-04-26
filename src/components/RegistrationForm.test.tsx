@@ -49,7 +49,7 @@ describe('RegistrationForm', () => {
     });
     fireEvent.click(
       screen.getByRole('button', {
-        name: /tomei minha decisão e entreguei minha vida a jesus hoje/i,
+        name: /entreguei minha vida a jesus hoje/i,
       }),
     );
     fireEvent.click(screen.getByRole('button', { name: /enviar meu salve/i }));
@@ -65,5 +65,27 @@ describe('RegistrationForm', () => {
     expect(
       await screen.findByRole('heading', { name: /glória a deus/i }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps returning separate from first decision', async () => {
+    render(<RegistrationForm />);
+
+    fireEvent.change(screen.getByPlaceholderText(/seu nome completo/i), {
+      target: { value: 'Joao Retorno' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/\(00\) 00000-0000/i), {
+      target: { value: '11999999999' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /já caminhei com jesus e quero voltar/i,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /enviar meu salve/i }));
+
+    await waitFor(() => expect(insertMock).toHaveBeenCalledTimes(1));
+    const payload = insertMock.mock.calls[0][0][0];
+    expect(payload.accepted_jesus).toBe(false);
+    expect(payload.is_returning).toBe(true);
   });
 });

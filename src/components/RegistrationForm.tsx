@@ -63,7 +63,8 @@ export default function RegistrationForm() {
     try {
       const finalData = {
         ...formData,
-        accepted_jesus: decisionChoice === 'today' || decisionChoice === 'returning',
+        // "Retornando" e "Aceitou hoje" são contextos diferentes e exclusivos.
+        accepted_jesus: decisionChoice === 'today',
         is_returning: decisionChoice === 'returning',
       };
       const { error: supaError } = await supabase.from('registrations').insert([finalData]);
