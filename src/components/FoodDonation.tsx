@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MapPin, Calendar, Heart, X, Coffee, Utensils, ChevronDown, HeartHandshake } from 'lucide-react';
 import { supabase } from '../supabase';
 import { VolunteerModal } from './VolunteerModal';
+import { Link } from 'react-router-dom';
 import donationImage7 from '../../imagens/7.png';
 
 const FoodDonation = () => {
@@ -66,7 +67,7 @@ const FoodDonation = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
+    <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4 overflow-x-hidden">
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24 items-center">
           <div>
@@ -141,11 +142,12 @@ const FoodDonation = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center mb-10">
-            <button 
-              onClick={() => setIsVolunteerModalOpen(true)}
-              className="px-8 py-4 bg-transparent text-white border-2 border-white/10 font-bold uppercase tracking-wider rounded-xl hover:bg-white/5 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban">
-              QUERO SER VOLUNTÁRIO
-            </button>
+            <Link
+              to="/coleta"
+              className="px-8 py-4 bg-white/5 text-white border-2 border-white/10 font-bold uppercase tracking-wider rounded-xl hover:bg-white/10 hover:border-urban-yellow/40 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban"
+            >
+              QUERO DOAR ITENS
+            </Link>
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-8 py-4 bg-urban-yellow text-urban-black border-2 border-urban-yellow font-bold uppercase tracking-wider rounded-xl hover:bg-yellow-400 transition-transform hover:scale-105 active:scale-95 w-full md:w-auto text-center font-urban street-border flex items-center justify-center gap-2">

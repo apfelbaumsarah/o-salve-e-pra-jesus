@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Radio, Download } from 'lucide-react';
+import { ArrowLeft, X, ChevronLeft, ChevronRight, ImageIcon, Download } from 'lucide-react';
 import { supabase } from '../supabase';
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 50;
 
 interface EventGallery {
   id: string;
@@ -35,20 +35,21 @@ const GalleryEvent = () => {
   const [event, setEvent] = useState<EventGallery | null>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [notFound, setNotFound] = useState(false);
-  const [realtimeActive, setRealtimeActive] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [loadedPhotoIds, setLoadedPhotoIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     window.scrollTo(0, 0);
     if (slug) fetchEventAndPhotos(slug);
   }, [slug]);
 
-  const fetchPage = async (eventId: string, from: number) => {
+  const fetchPage = async (eventId: string, page: number) => {
+    const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
     const { data, count } = await supabase
       .from('gallery_photos')
@@ -77,39 +78,30 @@ const GalleryEvent = () => {
 
     setEvent(ev);
 
-    const { data, count } = await fetchPage(ev.id, 0);
+    const firstPage = 1;
+    const { data, count } = await fetchPage(ev.id, firstPage);
     setPhotos(data);
+    setLoadedPhotoIds({});
     setTotalCount(count);
-    setHasMore(data.length < count);
+    setCurrentPage(firstPage);
+    setTotalPages(Math.max(1, Math.ceil(count / PAGE_SIZE)));
     setLoading(false);
   };
 
-  const loadMore = useCallback(async () => {
-    if (!event || loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    const { data, count } = await fetchPage(event.id, photos.length);
-    setPhotos((prev) => {
-      const seen = new Set(prev.map((p) => p.id));
-      const merged = [...prev, ...data.filter((p) => !seen.has(p.id))];
-      setHasMore(merged.length < count);
+  const goToPage = async (page: number) => {
+    if (!event || page < 1 || page > totalPages || page === currentPage || loadingPage) return;
+    setLoadingPage(true);
+    try {
+      const { data, count } = await fetchPage(event.id, page);
+      setPhotos(data);
+      setLoadedPhotoIds({});
       setTotalCount(count);
-      return merged;
-    });
-    setLoadingMore(false);
-  }, [event, loadingMore, hasMore, photos.length]);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasMore) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) loadMore();
-      },
-      { rootMargin: '400px' }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [hasMore, loadMore]);
+      setTotalPages(Math.max(1, Math.ceil(count / PAGE_SIZE)));
+      setCurrentPage(page);
+    } finally {
+      setLoadingPage(false);
+    }
+  };
 
   // Realtime subscription — only after event is resolved
   useEffect(() => {
@@ -126,11 +118,17 @@ const GalleryEvent = () => {
           filter: `event_id=eq.${event.id}`,
         },
         (payload) => {
-          setPhotos((prev) => {
-            if (prev.some((p) => p.id === (payload.new as GalleryPhoto).id)) return prev;
-            return [payload.new as GalleryPhoto, ...prev];
+          if (currentPage === 1) {
+            setPhotos((prev) => {
+              if (prev.some((p) => p.id === (payload.new as GalleryPhoto).id)) return prev;
+              return [payload.new as GalleryPhoto, ...prev].slice(0, PAGE_SIZE);
+            });
+          }
+          setTotalCount((c) => {
+            const next = c + 1;
+            setTotalPages(Math.max(1, Math.ceil(next / PAGE_SIZE)));
+            return next;
           });
-          setTotalCount((c) => c + 1);
         }
       )
       .on(
@@ -142,21 +140,22 @@ const GalleryEvent = () => {
           filter: `event_id=eq.${event.id}`,
         },
         (payload) => {
-          setPhotos((prev) => {
-            const next = prev.filter((p) => p.id !== (payload.old as any).id);
-            if (next.length !== prev.length) setTotalCount((c) => Math.max(0, c - 1));
+          if (currentPage === 1) {
+            setPhotos((prev) => prev.filter((p) => p.id !== (payload.old as any).id));
+          }
+          setTotalCount((c) => {
+            const next = Math.max(0, c - 1);
+            setTotalPages(Math.max(1, Math.ceil(next / PAGE_SIZE)));
             return next;
           });
         }
       )
-      .subscribe((status) => {
-        setRealtimeActive(status === 'SUBSCRIBED');
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [event]);
+  }, [event, currentPage]);
 
   // Lightbox keyboard navigation
   useEffect(() => {
@@ -175,6 +174,11 @@ const GalleryEvent = () => {
   const formatDate = (dateStr: string) =>
     format(new Date(dateStr + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
+  const displayEventName =
+    event?.slug === 'salve-pra-jesus-1-edicao'
+      ? 'O SALVE! é pra JESUS. 1ª edição'
+      : event?.name;
+
   const downloadPhoto = async (photo: GalleryPhoto, index: number) => {
     try {
       const res = await fetch(photo.public_url);
@@ -192,6 +196,35 @@ const GalleryEvent = () => {
       window.open(photo.public_url, '_blank');
     }
   };
+
+  const markPhotoAsLoaded = (photoId: string) => {
+    setLoadedPhotoIds((prev) => {
+      if (prev[photoId]) return prev;
+      return { ...prev, [photoId]: true };
+    });
+  };
+
+  const paginationControls = totalPages > 1 && (
+    <div className="flex flex-wrap items-center justify-center gap-3 py-6">
+      <button
+        onClick={() => goToPage(currentPage - 1)}
+        disabled={loadingPage || currentPage === 1}
+        className="px-5 py-2.5 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-urban uppercase text-xs tracking-widest"
+      >
+        Anterior
+      </button>
+      <span className="font-urban text-xs md:text-sm text-gray-400 uppercase tracking-widest">
+        Pagina {currentPage} de {totalPages}
+      </span>
+      <button
+        onClick={() => goToPage(currentPage + 1)}
+        disabled={loadingPage || currentPage === totalPages}
+        className="px-5 py-2.5 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-urban uppercase text-xs tracking-widest"
+      >
+        {loadingPage ? 'Carregando...' : 'Proxima'}
+      </button>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -262,8 +295,8 @@ const GalleryEvent = () => {
             transition={{ duration: 0.6 }}
             className="space-y-4"
           >
-            <h1 className="font-display text-5xl md:text-7xl text-white leading-none tracking-tighter uppercase">
-              {event?.name}
+            <h1 className="font-display text-3xl md:text-5xl text-white leading-tight tracking-tight">
+              {displayEventName}
             </h1>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -277,12 +310,6 @@ const GalleryEvent = () => {
                 {totalCount} {totalCount === 1 ? 'foto' : 'fotos'}
               </span>
 
-              {realtimeActive && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold rounded-full font-urban uppercase tracking-wider">
-                  <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-                  AO VIVO
-                </span>
-              )}
             </div>
           </motion.div>
         </div>
@@ -290,6 +317,8 @@ const GalleryEvent = () => {
 
       {/* Photos */}
       <section className="max-w-7xl mx-auto px-4 py-12">
+        {paginationControls}
+
         {photos.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -302,12 +331,6 @@ const GalleryEvent = () => {
             <p className="font-display text-2xl text-gray-500 uppercase tracking-wide">
               Em breve as fotos deste evento aparecerao aqui.
             </p>
-            {realtimeActive && (
-              <p className="font-urban text-gray-600 mt-3 flex items-center justify-center gap-2">
-                <Radio size={14} className="text-red-400" />
-                Conectado em tempo real — novas fotos aparecerao automaticamente.
-              </p>
-            )}
           </motion.div>
         ) : (
           <div className="columns-2 md:columns-3 lg:columns-4 gap-3">
@@ -319,29 +342,40 @@ const GalleryEvent = () => {
                 transition={{ duration: 0.4 }}
                 className="break-inside-avoid mb-3"
               >
-                <img
-                  loading="lazy"
-                  src={photo.public_url}
-                  alt={photo.caption ?? `Foto ${index + 1}`}
-                  className="w-full rounded-lg cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-urban-yellow/50 transition-all duration-200"
+                <button
+                  type="button"
                   onClick={() => setLightboxIndex(index)}
-                />
+                  className="relative block w-full overflow-hidden rounded-lg bg-white/[0.04] cursor-pointer hover:ring-2 hover:ring-urban-yellow/50 transition-all duration-200"
+                  style={{
+                    aspectRatio:
+                      photo.width && photo.height
+                        ? `${photo.width} / ${photo.height}`
+                        : '3 / 4',
+                  }}
+                  aria-label={photo.caption ?? `Abrir foto ${index + 1}`}
+                >
+                  <div
+                    className={`absolute inset-0 animate-pulse bg-white/[0.06] transition-opacity duration-300 ${
+                      loadedPhotoIds[photo.id] ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  />
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={photo.public_url}
+                    alt={photo.caption ?? `Foto ${index + 1}`}
+                    onLoad={() => markPhotoAsLoaded(photo.id)}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                      loadedPhotoIds[photo.id] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                </button>
               </motion.div>
             ))}
           </div>
         )}
 
-        {hasMore && (
-          <div ref={sentinelRef} className="flex justify-center py-10">
-            <button
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="px-6 py-3 bg-urban-yellow text-urban-black font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-urban uppercase text-sm tracking-widest"
-            >
-              {loadingMore ? 'Carregando...' : `Carregar mais (${totalCount - photos.length})`}
-            </button>
-          </div>
-        )}
+        {paginationControls}
       </section>
 
       {/* Lightbox */}

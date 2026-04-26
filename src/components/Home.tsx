@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Calendar, MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,6 +41,7 @@ const SCHEDULED_EVENT: Event = {
 const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
 
@@ -125,48 +126,106 @@ const Home = () => {
     );
   }
 
-  const activeDesktopCoverImage = DESKTOP_COVER_IMAGES[currentBanner % DESKTOP_COVER_IMAGES.length];
-  const activeMobileCoverImage = MOBILE_COVER_IMAGES[currentBanner % MOBILE_COVER_IMAGES.length];
+  const goToNextBanner = () => setCurrentBanner((prev) => (prev + 1) % COVER_CAROUSEL_LENGTH);
+  const goToPreviousBanner = () =>
+    setCurrentBanner((prev) => (prev - 1 + COVER_CAROUSEL_LENGTH) % COVER_CAROUSEL_LENGTH);
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(event.touches[0]?.clientX ?? null);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+    const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = touchStartX - touchEndX;
+    const minSwipeDistance = 50;
+
+    if (deltaX > minSwipeDistance) {
+      goToNextBanner();
+    } else if (deltaX < -minSwipeDistance) {
+      goToPreviousBanner();
+    }
+    setTouchStartX(null);
+  };
 
   return (
     <div className="min-h-screen bg-urban-black pt-20 md:pt-24">
-      <section className="relative overflow-hidden aspect-[4/5] md:aspect-[8/3]">
-        <AnimatePresence mode="wait">
+      <section className="relative overflow-hidden aspect-[16/9] md:aspect-[8/3]">
+        <div
+          className="absolute inset-0 overflow-hidden bg-urban-gray"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <motion.div
-            key={currentBanner}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0 flex items-center justify-center bg-urban-gray"
+            className="flex h-full"
+            animate={{ x: `-${currentBanner * 100}%` }}
+            transition={{ duration: 0.6, ease: 'easeInOut' }}
           >
-            <img
-              src={activeMobileCoverImage}
-              alt="O SALVE É PRA JESUS"
-              className="absolute inset-0 w-full h-full object-contain object-center block md:hidden bg-urban-black"
-            />
-            <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-urban-black/35 to-transparent md:hidden pointer-events-none" />
-            <div className="absolute inset-x-0 bottom-0 h-24 md:hidden pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-t from-urban-black/85 via-urban-black/65 to-transparent" />
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-14 w-[82%] rounded-full bg-urban-black/55 blur-2xl opacity-55" />
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-8 w-[60%] rounded-full bg-urban-black/65 blur-xl opacity-45" />
-            </div>
-            <div className="absolute inset-0 hidden md:block">
-              <img
-                src={activeDesktopCoverImage}
-                alt="O SALVE É PRA JESUS"
-                className="w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-black/28 pointer-events-none" />
-              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-urban-black/80 to-transparent pointer-events-none" />
-              <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-urban-black/70 to-transparent pointer-events-none" />
-            </div>
+            {Array.from({ length: COVER_CAROUSEL_LENGTH }).map((_, index) => {
+              const slideDesktopImage = DESKTOP_COVER_IMAGES[index % DESKTOP_COVER_IMAGES.length];
+              const slideMobileImage = MOBILE_COVER_IMAGES[index % MOBILE_COVER_IMAGES.length];
+
+              return (
+                <div key={`cover-slide-${index}`} className="relative w-full h-full shrink-0">
+                  <img
+                    src={slideMobileImage}
+                    alt="O SALVE É PRA JESUS"
+                    className="absolute inset-0 w-full h-full object-cover object-center block md:hidden bg-urban-black"
+                  />
+                  <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-urban-black/50 to-transparent md:hidden pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-16 md:hidden pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-t from-urban-black/95 via-urban-black/55 to-transparent" />
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-10 w-[78%] rounded-full bg-urban-black/80 blur-xl opacity-85" />
+                  </div>
+                  <div className="absolute inset-0 hidden md:block">
+                    <img
+                      src={slideDesktopImage}
+                      alt="O SALVE É PRA JESUS"
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <div className="absolute inset-0 bg-black/28 pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-urban-black/80 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-urban-black/70 to-transparent pointer-events-none" />
+                  </div>
+                </div>
+              );
+            })}
           </motion.div>
-        </AnimatePresence>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-3 z-20 flex items-center justify-center gap-2 md:bottom-5">
+          {Array.from({ length: COVER_CAROUSEL_LENGTH }).map((_, index) => (
+            <button
+              key={`cover-dot-${index}`}
+              type="button"
+              onClick={() => setCurrentBanner(index)}
+              className={`h-1.5 rounded-full transition-all ${
+                currentBanner === index ? 'w-6 bg-urban-yellow' : 'w-2 bg-white/60'
+              }`}
+              aria-label={`Ir para banner ${index + 1}`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={goToPreviousBanner}
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 text-white text-xl leading-none flex items-center justify-center md:hidden"
+          aria-label="Banner anterior"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          onClick={goToNextBanner}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 text-white text-xl leading-none flex items-center justify-center md:hidden"
+          aria-label="Proximo banner"
+        >
+          ›
+        </button>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="py-2 -mt-2 md:mt-0">
+      <section className="max-w-7xl mx-auto px-4 py-6 md:py-16">
+        <div className="py-0">
           <h1 className="font-display text-4xl md:text-6xl text-urban-yellow tracking-tight mb-4">
             O SALVE É REAL.
           </h1>
@@ -182,7 +241,7 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 py-20">
+      <section className="max-w-7xl mx-auto px-4 pt-8 pb-20 md:py-20">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
           <div>
             <h2 className="font-display text-5xl text-white mb-2">PRÓXIMOS <span className="text-urban-yellow">EVENTOS</span></h2>
@@ -198,11 +257,19 @@ const Home = () => {
                 whileHover={{ y: -10 }}
                 className="p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent"
               >
-                <div className="inline-flex items-center gap-2 text-urban-yellow mb-4 px-3 py-1.5 rounded-full border border-urban-yellow/25 bg-urban-yellow/10">
-                  <Calendar size={18} />
-                  <span className="font-urban font-bold text-sm uppercase">
-                    {event.date ? format(new Date(event.date), "dd 'de' MMMM '•' HH'h'", { locale: ptBR }) : 'Data em breve'}
-                  </span>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <div className="inline-flex items-center gap-2 text-urban-yellow px-3 py-1.5 rounded-full border border-urban-yellow/25 bg-urban-yellow/10">
+                    <Calendar size={18} />
+                    <span className="font-urban font-bold text-sm uppercase">
+                      {event.date ? format(new Date(event.date), "dd 'de' MMMM '•' HH'h'", { locale: ptBR }) : 'Data em breve'}
+                    </span>
+                  </div>
+                  {event.date && new Date(event.date).getTime() < Date.now() && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
+                      <CheckCircle2 size={14} />
+                      <span className="font-urban font-bold text-xs uppercase tracking-wide">JÁ ACONTECEU</span>
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-display text-3xl text-white mb-3">{event.title}</h3>
                 <div className="flex items-start gap-2 text-gray-400 mb-6">
@@ -223,7 +290,7 @@ const Home = () => {
       </section>
 
       {galleryPhotos.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 py-20">
+        <section className="max-w-7xl mx-auto px-4 pt-8 pb-20 md:py-20">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
               <h2 className="font-display text-5xl text-white mb-2">

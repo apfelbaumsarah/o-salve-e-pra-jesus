@@ -26,6 +26,7 @@ interface EventGallery {
 const GalleryIndex = () => {
   const [events, setEvents] = useState<EventGallery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedCoverIds, setLoadedCoverIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -47,32 +48,34 @@ const GalleryIndex = () => {
 
       const enriched = await Promise.all(
         rawEvents.map(async (ev) => {
-          let coverUrl: string | null = null;
+          const coverPromise = ev.cover_photo_id
+            ? supabase
+                .from('gallery_photos')
+                .select('public_url')
+                .eq('id', ev.cover_photo_id)
+                .single()
+            : Promise.resolve({ data: null as GalleryPhoto | null });
 
-          if (ev.cover_photo_id) {
-            const { data: coverPhoto } = await supabase
-              .from('gallery_photos')
-              .select('public_url')
-              .eq('id', ev.cover_photo_id)
-              .single();
-            coverUrl = coverPhoto?.public_url ?? null;
-          }
+          const latestPhotoPromise = supabase
+            .from('gallery_photos')
+            .select('public_url')
+            .eq('event_id', ev.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-          if (!coverUrl) {
-            const { data: latestPhoto } = await supabase
-              .from('gallery_photos')
-              .select('public_url')
-              .eq('event_id', ev.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            coverUrl = latestPhoto?.public_url ?? null;
-          }
-
-          const { count } = await supabase
+          const countPromise = supabase
             .from('gallery_photos')
             .select('id', { count: 'exact', head: true })
             .eq('event_id', ev.id);
+
+          const [{ data: coverPhoto }, { data: latestPhoto }, { count }] = await Promise.all([
+            coverPromise,
+            latestPhotoPromise,
+            countPromise,
+          ]);
+
+          const coverUrl = coverPhoto?.public_url ?? latestPhoto?.public_url ?? null;
 
           return {
             ...ev,
@@ -92,6 +95,13 @@ const GalleryIndex = () => {
 
   const formatDate = (dateStr: string) =>
     format(new Date(dateStr + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
+  const markCoverAsLoaded = (eventId: string) => {
+    setLoadedCoverIds((prev) => {
+      if (prev[eventId]) return prev;
+      return { ...prev, [eventId]: true };
+    });
+  };
 
   return (
     <div className="min-h-screen bg-urban-black pt-20">
@@ -158,12 +168,23 @@ const GalleryIndex = () => {
                   {/* Cover image */}
                   <div className="relative h-52 overflow-hidden bg-black/40">
                     {ev.cover_url ? (
-                      <img
-                        src={ev.cover_url}
-                        alt={ev.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
+                      <>
+                        <div
+                          className={`absolute inset-0 bg-white/[0.06] animate-pulse transition-opacity duration-300 ${
+                            loadedCoverIds[ev.id] ? 'opacity-0' : 'opacity-100'
+                          }`}
+                        />
+                        <img
+                          src={ev.cover_url}
+                          alt={ev.name}
+                          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 transition-opacity duration-300 ${
+                            loadedCoverIds[ev.id] ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          loading="lazy"
+                          decoding="async"
+                          onLoad={() => markCoverAsLoaded(ev.id)}
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-white/[0.03]">
                         <ImageIcon size={48} className="text-gray-700" />
