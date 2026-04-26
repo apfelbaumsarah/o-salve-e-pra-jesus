@@ -83,7 +83,10 @@ const GalleryEvent = () => {
   };
 
   const scrollToPhotosTop = () => {
-    photosSectionRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    if (!photosSectionRef.current || typeof window === 'undefined') return;
+    const navbarOffset = 96;
+    const top = photosSectionRef.current.getBoundingClientRect().top + window.scrollY - navbarOffset;
+    window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
   };
 
   const fetchEventAndPhotos = async (eventSlug: string) => {
@@ -134,6 +137,7 @@ const GalleryEvent = () => {
       updatePathWithPage(page);
     } finally {
       setLoadingPage(false);
+      scrollToPhotosTop();
     }
   };
 
