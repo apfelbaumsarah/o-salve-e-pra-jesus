@@ -209,6 +209,20 @@ const GalleryEvent = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [lightboxIndex, photos.length]);
 
+  // Keep lightbox stable on mobile (no background scroll/bounce)
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [lightboxIndex]);
+
   const formatDate = (dateStr: string) =>
     format(new Date(dateStr + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
@@ -435,12 +449,12 @@ const GalleryEvent = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
+            className="fixed inset-0 bg-black/95 z-[120] flex items-center justify-center overflow-hidden overscroll-none touch-none"
             onClick={() => setLightboxIndex(null)}
           >
             {/* Download button */}
             <button
-              className="absolute top-4 right-16 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-urban-yellow hover:text-urban-black transition-colors"
+              className="absolute left-4 top-[max(12px,env(safe-area-inset-top))] z-20 p-2 rounded-full bg-white/15 text-white hover:bg-urban-yellow hover:text-urban-black transition-colors"
               onClick={(e) => { e.stopPropagation(); downloadPhoto(photos[lightboxIndex], lightboxIndex); }}
               aria-label="Baixar foto"
               title="Baixar"
@@ -450,7 +464,7 @@ const GalleryEvent = () => {
 
             {/* Close button */}
             <button
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="absolute right-4 top-[max(12px,env(safe-area-inset-top))] z-20 p-2 rounded-full bg-white/15 text-white hover:bg-white/20 transition-colors"
               onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
               aria-label="Fechar"
             >
