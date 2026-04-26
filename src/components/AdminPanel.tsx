@@ -17,7 +17,8 @@ import { cn } from '../lib/utils';
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -32,6 +33,7 @@ type Tab = 'dashboard' | 'registrations' | 'crm_pipeline' | 'banners' | 'lives' 
 
 const ALL_TABS: Tab[] = ['dashboard', 'registrations', 'crm_pipeline', 'banners', 'lives', 'events', 'prayers', 'team', 'settings', 'volunteers', 'collection', 'events_gallery'];
 const DELETABLE_TABS: Tab[] = ['registrations', 'banners', 'lives', 'events', 'prayers', 'team', 'events_gallery'];
+const ADMIN_ACTIVE_TAB_STORAGE_KEY = 'salve_admin_active_tab';
 
 interface AdminDonutProps {
   labels: string[];
@@ -91,7 +93,14 @@ export default function AdminPanel() {
   const MAIN_ADMIN_EMAIL = 'contato@salveprajesus.org';
   const LEGACY_BLOCKED_EMAIL = 'sarahb.contato@gmail.com';
   const [user, setUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === 'undefined') return 'dashboard';
+    const savedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY);
+    if (savedTab && (ALL_TABS as string[]).includes(savedTab)) {
+      return savedTab as Tab;
+    }
+    return 'dashboard';
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
@@ -119,6 +128,10 @@ export default function AdminPanel() {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [activeDragItem, setActiveDragItem] = useState<any | null>(null);
   const [activePipelineFilters, setActivePipelineFilters] = useState<string[]>([]);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobilePipelineStage, setMobilePipelineStage] = useState<'novo' | 'contatado' | 'acompanhamento' | 'concluido'>('novo');
+  const [showMobilePipelineFilters, setShowMobilePipelineFilters] = useState(false);
+  const pipelineColumnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Multiple selection state (Cadastros tab)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -238,15 +251,47 @@ export default function AdminPanel() {
     // only super_admin and admin can delete; igreja never deletes
     return userProfile.role === 'super_admin' || userProfile.role === 'admin';
   };
+  const goToOverview = () => {
+    if (canViewTab('dashboard')) {
+      setActiveTab('dashboard');
+    } else if (canViewTab('crm_pipeline')) {
+      setActiveTab('crm_pipeline');
+    }
+    setIsSidebarOpen(false);
+  };
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     setSearchTerm('');
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!isMobileViewport) return;
+    const activeColumn = pipelineColumnRefs.current[mobilePipelineStage];
+    if (activeColumn) activeColumn.scrollTop = 0;
+  }, [mobilePipelineStage, isMobileViewport]);
+
   // Redirect 'igreja' users away from dashboard (which they cannot see)
   // Redirect 'editor' users to events_gallery
   useEffect(() => {
+    if (!userProfile) return;
+
+    if (!canViewTab(activeTab)) {
+      if (canViewTab('dashboard')) {
+        setActiveTab('dashboard');
+      } else if (canViewTab('crm_pipeline')) {
+        setActiveTab('crm_pipeline');
+      } else if (canViewTab('events_gallery')) {
+        setActiveTab('events_gallery');
+      }
+      return;
+    }
+
     if (userProfile?.role === 'igreja' && activeTab === 'dashboard') {
       setActiveTab('crm_pipeline');
     }
@@ -1005,6 +1050,7 @@ export default function AdminPanel() {
     acompanhamento:    { label: 'Em Acompanhamento', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20', dot: 'bg-purple-400' },
     concluido:         { label: 'Concluído',         color: 'bg-urban-yellow/10 text-urban-yellow border-urban-yellow/30 shadow-[0_0_12px_rgba(206,189,103,0.25)]',  dot: 'bg-urban-yellow' },
   };
+  const PIPELINE_STAGE_ORDER = ['novo', 'contatado', 'acompanhamento', 'concluido'] as const;
 
   const VOLUNTEER_STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
     disponivel: { label: 'Disponível', color: 'bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20', dot: 'bg-[#00FF66]' },
@@ -1109,7 +1155,8 @@ export default function AdminPanel() {
 
   // dnd-kit sensors
   const pipelineSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 10 } }),
     useSensor(KeyboardSensor)
   );
 
@@ -1162,6 +1209,15 @@ export default function AdminPanel() {
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   const updateRegistrationStatus = async () => {
     if (!selectedRegistration) return;
@@ -1372,9 +1428,15 @@ export default function AdminPanel() {
         )}
       >
         <div className="p-6 flex items-center justify-between border-b border-white/10">
-          <h1 className="font-display text-2xl text-white">
+          <button
+            type="button"
+            onClick={goToOverview}
+            className="font-display text-2xl text-white hover:text-urban-yellow transition-colors text-left"
+            title="Ir para Visão Geral"
+            aria-label="Ir para Visão Geral"
+          >
             PAINEL <span className="text-urban-yellow">ADMIN</span>
-          </h1>
+          </button>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="md:hidden text-gray-400 hover:text-white"
@@ -1518,9 +1580,15 @@ export default function AdminPanel() {
       )}
 
       <div className="md:hidden fixed top-0 w-full bg-urban-gray border-b border-white/10 p-4 z-40 flex items-center justify-between">
-        <h1 className="font-display text-xl text-white">
+        <button
+          type="button"
+          onClick={goToOverview}
+          className="flex-1 font-display text-xl text-white hover:text-urban-yellow transition-colors text-left"
+          title="Ir para Visão Geral"
+          aria-label="Ir para Visão Geral"
+        >
           PAINEL <span className="text-urban-yellow">ADMIN</span>
-        </h1>
+        </button>
         <button
           aria-label="Abrir menu"
           aria-expanded={isSidebarOpen}
@@ -1532,7 +1600,7 @@ export default function AdminPanel() {
         </button>
       </div>
 
-      <div className="flex-1 md:ml-64 pt-20 md:pt-8 p-4 md:p-8 min-h-screen">
+      <div className="flex-1 md:ml-64 pt-20 md:pt-8 p-4 md:p-8 pb-[calc(env(safe-area-inset-bottom)+1rem)] md:pb-8 min-h-screen">
         <div className="max-w-6xl mx-auto space-y-6">
 
           {activeTab === 'dashboard' && canViewTab('dashboard') && (
@@ -1702,36 +1770,65 @@ export default function AdminPanel() {
                   .some((val) => String(val || '').toLowerCase().includes(normalizedSearchTerm));
               });
               const isFiltering = !!(normalizedSearchTerm || activePipelineFilters.length > 0);
-              const stageKeys = ['novo', 'contatado', 'acompanhamento', 'concluido'] as const;
+              const stageKeys = PIPELINE_STAGE_ORDER;
               const stageTotals = Object.fromEntries(
                 stageKeys.map((sk) => [sk, pipelineBase.filter((i: any) => getPipelineStage(i) === sk).length])
               ) as Record<string, number>;
-              const totalVisible = pipelineBase.length;
+              const stageVisibleCounts = Object.fromEntries(
+                stageKeys.map((sk) => [sk, pipelineFiltered.filter((i: any) => getPipelineStage(i) === sk).length])
+              ) as Record<string, number>;
               return (
                 <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
-                  <div className="rounded-2xl md:rounded-3xl bg-urban-gray/80 border border-white/10 p-4 md:p-8 flex flex-col gap-3 md:gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)]">
+                  <div className="md:static sticky top-16 z-30 rounded-xl md:rounded-3xl bg-urban-gray/90 md:bg-urban-gray/80 border border-white/10 p-2.5 md:p-8 flex flex-col gap-2 md:gap-4 shadow-[0_0_15px_rgba(255,232,31,0.08)] backdrop-blur-sm">
                     <div>
-                      <h3 className="text-white font-display text-2xl md:text-3xl uppercase tracking-wide mb-1 md:mb-2 leading-tight">Acompanhamento de Discípulos</h3>
-                      <p className="text-gray-400 font-urban text-sm md:text-base">Acompanhe cada pessoa que aceitou Jesus ou está conhecendo, do primeiro contato ao discipulado.</p>
+                      <h3 className="text-white font-display text-base md:text-3xl uppercase tracking-wide mb-0.5 md:mb-2 leading-tight">Acompanhamento de Discípulos</h3>
+                      <p className="text-gray-400 font-urban text-[11px] md:text-base">No celular, use as etapas e os botões de seta nos cards para mover com segurança.</p>
                     </div>
                     <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center flex-wrap">
                       <div className="relative w-full md:w-96">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                         <input
                           type="text"
-                          placeholder="Buscar nome, WhatsApp, cidade..."
+                          placeholder="Buscar nome ou WhatsApp..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-11 pr-4 py-2.5 md:py-3 bg-urban-gray border border-white/10 rounded-xl text-white text-sm md:text-base focus:border-urban-yellow/60 outline-none"
+                          className="w-full pl-11 pr-4 py-2 md:py-3 bg-urban-gray border border-white/10 rounded-xl text-white text-sm md:text-base focus:border-urban-yellow/60 outline-none"
                         />
+                        {!!searchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:border-urban-yellow/40 transition-colors flex items-center justify-center"
+                            aria-label="Limpar busca"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
                       </div>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-hidden -mx-1 px-1 md:flex-wrap md:overflow-visible md:mx-0 md:px-0">
+                      <div className="md:hidden flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowMobilePipelineFilters((prev) => !prev)}
+                          className="px-3 py-1.5 rounded-full text-xs font-bold border border-white/15 text-gray-200 bg-white/5"
+                        >
+                          {showMobilePipelineFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+                        </button>
+                        {(activePipelineFilters.length > 0 || !!searchTerm) && (
+                          <span className="text-[11px] text-urban-yellow font-bold">
+                            {activePipelineFilters.length + (searchTerm ? 1 : 0)} ativos
+                          </span>
+                        )}
+                      </div>
+                      <div className={cn(
+                        "gap-2 flex-wrap",
+                        showMobilePipelineFilters ? "flex" : "hidden md:flex"
+                      )}>
                         {PIPELINE_FILTER_DEFS.map((fd) => (
                           <button
                             key={fd.key}
                             onClick={() => togglePipelineFilter(fd.key)}
                             className={cn(
-                              "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold border transition-all",
+                              "shrink-0 whitespace-nowrap px-2.5 md:px-3 py-1.5 rounded-full text-[11px] md:text-xs font-bold border transition-all",
                               activePipelineFilters.includes(fd.key)
                                 ? "bg-urban-yellow text-urban-black border-urban-yellow"
                                 : "bg-white/5 text-gray-300 border-white/10 hover:border-urban-yellow/40 hover:text-white"
@@ -1740,25 +1837,56 @@ export default function AdminPanel() {
                             {fd.label}
                           </button>
                         ))}
+                        {(activePipelineFilters.length > 0 || !!searchTerm) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActivePipelineFilters([]);
+                              setSearchTerm('');
+                            }}
+                            className="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold border border-red-300/30 text-red-300 bg-red-500/10 hover:bg-red-500/15 transition-all"
+                          >
+                            Limpar
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Dica mobile de scroll horizontal */}
-                  <div className="md:hidden flex items-center justify-center gap-2 text-gray-500 text-xs uppercase tracking-wider font-bold">
-                    <ChevronLeft size={14} />
-                    <span>Deslize para ver todas as etapas</span>
-                    <ChevronRight size={14} />
+                  {/* Navegação mobile por etapa */}
+                  <div className="md:hidden">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {stageKeys.map((stageKey) => {
+                        const cfg = STATUS_CONFIG[stageKey];
+                        const mobileLabel = stageKey === 'acompanhamento' ? 'Acomp.' : cfg.label;
+                        const isActive = stageKey === mobilePipelineStage;
+                        return (
+                          <button
+                            key={stageKey}
+                            type="button"
+                            onClick={() => setMobilePipelineStage(stageKey)}
+                            className={cn(
+                              'w-full px-1 py-2 rounded-xl text-[10px] leading-tight font-bold border transition-all text-center',
+                              isActive
+                                ? 'bg-urban-yellow text-urban-black border-urban-yellow'
+                                : 'bg-white/5 text-gray-300 border-white/10'
+                            )}
+                          >
+                            {mobileLabel} ({stageVisibleCounts[stageKey]})
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="-mx-4 lg:mx-0 overflow-x-auto lg:overflow-visible scrollbar-hidden pb-2 snap-x snap-mandatory lg:snap-none scroll-px-4 lg:scroll-px-0">
+                  <div className="mx-0 overflow-x-hidden md:-mx-4 md:overflow-x-auto lg:mx-0 lg:overflow-visible scrollbar-hidden pb-2 md:snap-x md:snap-mandatory lg:snap-none md:scroll-px-4 lg:scroll-px-0">
                     <DndContext
                       sensors={pipelineSensors}
                       collisionDetection={closestCorners}
                       onDragStart={handleDndDragStart}
                       onDragEnd={handleDndDragEnd}
                     >
-                      <div className="grid grid-flow-col auto-cols-[82vw] md:auto-cols-[320px] lg:grid-flow-row lg:grid-cols-4 lg:auto-cols-auto gap-3 md:gap-4 px-4 lg:px-0">
+                      <div className="grid grid-cols-1 justify-items-center md:grid-flow-col md:auto-cols-[320px] md:justify-items-stretch lg:grid-flow-row lg:grid-cols-4 lg:auto-cols-auto gap-3 md:gap-4 px-0 md:px-4 lg:px-0">
                         {stageKeys.map((stageKey) => {
                           const totalForStage = stageTotals[stageKey];
                           const cards = pipelineFiltered
@@ -1768,7 +1896,10 @@ export default function AdminPanel() {
                           return (
                             <div
                               key={stageKey}
-                              className="snap-start min-w-0 rounded-2xl md:rounded-3xl p-3 md:p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]"
+                              className={cn(
+                                "w-full max-w-[520px] md:max-w-none snap-start min-w-0 rounded-2xl md:rounded-3xl p-3 md:p-4 bg-urban-gray/75 backdrop-blur-sm transition-all shadow-[0_0_15px_rgba(255,232,31,0.05)] ring-1 ring-white/[0.06]",
+                                isMobileViewport && stageKey !== mobilePipelineStage ? 'hidden' : ''
+                              )}
                             >
                               <div className="flex items-center justify-between mb-3 md:mb-4 sticky top-0 bg-urban-gray/75 backdrop-blur-sm -mx-3 md:-mx-4 px-3 md:px-4 py-2 rounded-t-2xl md:rounded-t-3xl z-10">
                                 <h4 className="font-display text-lg md:text-xl text-white tracking-wide uppercase truncate pr-2">{stageCfg.label}</h4>
@@ -1776,7 +1907,12 @@ export default function AdminPanel() {
                                   {isFiltering ? `${cards.length}/${totalForStage}` : totalForStage}
                                 </span>
                               </div>
-                              <PipelineColumn stageKey={stageKey}>
+                              <PipelineColumn
+                                stageKey={stageKey}
+                                contentRef={(node: HTMLDivElement | null) => {
+                                  pipelineColumnRefs.current[stageKey] = node;
+                                }}
+                              >
                                 {cards.map((item: any) => {
                                   const parsed = parseAdminNotes(item.admin_notes);
                                   return (
@@ -1788,6 +1924,19 @@ export default function AdminPanel() {
                                       parsed={parsed}
                                       hasNoBibleFn={hasNoBible}
                                       getInitialsFn={getInitials}
+                                      enableDrag={!isMobileViewport}
+                                      canMovePrev={PIPELINE_STAGE_ORDER.indexOf(stageKey) > 0}
+                                      canMoveNext={PIPELINE_STAGE_ORDER.indexOf(stageKey) < PIPELINE_STAGE_ORDER.length - 1}
+                                      onMovePrev={async () => {
+                                        const currentIndex = PIPELINE_STAGE_ORDER.indexOf(stageKey);
+                                        if (currentIndex <= 0) return;
+                                        await moveCadastroToStage(item.id, PIPELINE_STAGE_ORDER[currentIndex - 1]);
+                                      }}
+                                      onMoveNext={async () => {
+                                        const currentIndex = PIPELINE_STAGE_ORDER.indexOf(stageKey);
+                                        if (currentIndex >= PIPELINE_STAGE_ORDER.length - 1) return;
+                                        await moveCadastroToStage(item.id, PIPELINE_STAGE_ORDER[currentIndex + 1]);
+                                      }}
                                       onClick={() => {
                                         setSelectedRegistration(item);
                                         setEditingStatus(item.status || 'novo');
@@ -2985,6 +3134,11 @@ interface PipelineCardProps {
   parsed: { owner: string; notes: string };
   hasNoBibleFn: (item: any) => boolean;
   getInitialsFn: (s: string) => string;
+  enableDrag: boolean;
+  canMovePrev: boolean;
+  canMoveNext: boolean;
+  onMovePrev: () => Promise<void> | void;
+  onMoveNext: () => Promise<void> | void;
   onClick: () => void;
 }
 
@@ -2995,6 +3149,11 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
   parsed,
   hasNoBibleFn,
   getInitialsFn,
+  enableDrag,
+  canMovePrev,
+  canMoveNext,
+  onMovePrev,
+  onMoveNext,
   onClick,
 }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -3005,7 +3164,7 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.45 : 1,
-    touchAction: 'none',
+    touchAction: enableDrag ? 'none' : 'manipulation',
   };
 
   const createdShort = item.created_at
@@ -3025,8 +3184,8 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(enableDrag ? attributes : {})}
+      {...(enableDrag ? listeners : {})}
       role="button"
       tabIndex={0}
       aria-label={`${item.name || 'Sem nome'} — ${stageLabel}`}
@@ -3038,7 +3197,8 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
         }
       }}
       className={cn(
-        "relative group bg-urban-gray rounded-2xl p-3 space-y-2 transition-all md:cursor-grab active:cursor-grabbing ring-1 ring-white/10 hover:ring-white/20 hover:shadow-[0_0_15px_rgba(255,232,31,0.1)]",
+        "relative group bg-urban-gray rounded-2xl p-3 space-y-2 transition-all ring-1 ring-white/10 hover:ring-white/20 hover:shadow-[0_0_15px_rgba(255,232,31,0.1)]",
+        enableDrag ? "md:cursor-grab active:cursor-grabbing" : "",
         "before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-white/10 before:transition-colors",
         "hover:before:bg-urban-yellow/40",
         isDragging ? "scale-[0.98]" : ""
@@ -3083,6 +3243,37 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
         )}
       </div>
 
+      {/* Ação rápida mobile para mover sem drag */}
+      <div className="md:hidden flex items-center gap-1">
+        <button
+          type="button"
+          disabled={!canMovePrev}
+          onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.stopPropagation();
+            void onMovePrev();
+          }}
+          className="w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-gray-300 disabled:opacity-35 disabled:cursor-not-allowed hover:border-urban-yellow/40 hover:text-urban-yellow transition-colors flex items-center justify-center"
+          aria-label="Mover para etapa anterior"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Mover</span>
+        <button
+          type="button"
+          disabled={!canMoveNext}
+          onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.stopPropagation();
+            void onMoveNext();
+          }}
+          className="w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-gray-300 disabled:opacity-35 disabled:cursor-not-allowed hover:border-urban-yellow/40 hover:text-urban-yellow transition-colors flex items-center justify-center"
+          aria-label="Mover para próxima etapa"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 pt-0.5">
         {item.accepted_jesus && !item.is_returning && (
@@ -3108,20 +3299,27 @@ const PipelineCard: React.FC<PipelineCardProps> = ({
 interface PipelineColumnProps {
   stageKey: string;
   children: React.ReactNode;
+  contentRef?: (node: HTMLDivElement | null) => void;
 }
 
 const PipelineColumn: React.FC<PipelineColumnProps> = ({
   stageKey,
   children,
+  contentRef,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `col-${stageKey}`,
     data: { stageKey },
   });
 
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    if (contentRef) contentRef(node);
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       className={cn(
         "min-h-[120px] space-y-2 max-h-[65vh] overflow-y-auto pipeline-scrollbar pr-1 transition-colors rounded-xl",
         isOver ? "bg-urban-yellow/[0.04] ring-1 ring-urban-yellow/30" : ""
