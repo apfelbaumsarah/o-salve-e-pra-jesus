@@ -4,15 +4,37 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Send, CheckCircle } from 'lucide-react';
 
 const PrayerRequests = () => {
-  const [formData, setFormData] = useState({ name: '', request: '' });
+  const [formData, setFormData] = useState({ name: '', whatsapp: '', request: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const formatWhatsApp = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const isValidWhatsApp = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.length === 11;
+  };
+
+  const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatWhatsApp(e.target.value);
+    setFormData({ ...formData, whatsapp: formatted });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.request) {
-      setError('Por favor, preencha todos os campos.');
+    if (!formData.name || !formData.whatsapp || !formData.request) {
+      setError('Por favor, preencha os campos obrigatórios (Nome, WhatsApp e Pedido).');
+      return;
+    }
+
+    if (!isValidWhatsApp(formData.whatsapp)) {
+      setError('Por favor, insira um WhatsApp válido com DDD (ex: 11 99999-9999).');
       return;
     }
 
@@ -23,7 +45,7 @@ const PrayerRequests = () => {
       const { error: supaError } = await supabase.from('prayer_requests').insert([formData]);
       if (supaError) throw supaError;
       setIsSuccess(true);
-      setFormData({ name: '', request: '' });
+      setFormData({ name: '', whatsapp: '', request: '' });
     } catch (err: any) {
       console.error('Error adding prayer request:', err);
       setError('Ocorreu um erro ao enviar seu pedido. Tente novamente.');
@@ -33,7 +55,7 @@ const PrayerRequests = () => {
   };
 
   return (
-    <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
+    <div className="min-h-screen bg-urban-black pt-32 md:pt-36 pb-20 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="p-10 rounded-3xl border border-white/10 bg-gradient-to-br from-urban-yellow/10 via-white/[0.03] to-transparent">
           <div className="mb-8">
@@ -82,6 +104,21 @@ const PrayerRequests = () => {
                 </div>
 
                 <div>
+                  <label className="block font-urban text-sm font-bold text-gray-400 uppercase mb-2">TELEFONE / WHATSAPP *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.whatsapp}
+                    onChange={handleWhatsAppChange}
+                    maxLength={15}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    className="w-full bg-urban-black border border-white/10 rounded-xl px-4 py-4 text-white focus:border-urban-yellow focus:ring-1 focus:ring-urban-yellow transition-all outline-none"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+
+                <div>
                   <label className="block font-urban text-sm font-bold text-gray-400 uppercase mb-2">SEU PEDIDO</label>
                   <textarea
                     rows={6}
@@ -116,7 +153,7 @@ const PrayerRequests = () => {
 
         <div className="mt-12 text-center">
           <p className="text-gray-500 text-sm font-urban italic">
-            "Pedi, e dar-se-vos-á; buscai, e encontrareis; batei, e abrir-se-vos-á." <br />
+            "Peçam, e lhes será dado; busquem, e encontrarão; batam, e a porta lhes será aberta." <br />
             <span className="font-bold">Mateus 7:7</span>
           </p>
         </div>
