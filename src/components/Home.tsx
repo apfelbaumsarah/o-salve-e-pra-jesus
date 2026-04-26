@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import fallbackBannerImageDesktop from '../../imagens/hero-desktop.png';
-import mobileOverlayImage from '../../imagens/hero-mobile.png';
-
-interface Banner {
-  id: string;
-  image_url: string;
-  title: string;
-  subtitle: string;
-  order: number;
-}
+import mainCoverImage from '../../imagens/35.png';
+import secondaryCoverImage from '../../imagens/36.png';
+import mobileCoverImageOne from '../../imagens/40.png';
+import mobileCoverImageTwo from '../../imagens/41.png';
 
 interface Event {
   id: string;
@@ -32,6 +26,9 @@ interface GalleryPhoto {
 
 const GALLERY_SLUG = 'salve-pra-jesus-1-edicao';
 const GALLERY_EXTERNAL_URL = 'https://www.salveprajesus.org/galeria/salve-pra-jesus-1-edicao';
+const DESKTOP_COVER_IMAGES = [mainCoverImage, secondaryCoverImage];
+const MOBILE_COVER_IMAGES = [mobileCoverImageTwo, mobileCoverImageOne];
+const COVER_CAROUSEL_LENGTH = Math.max(DESKTOP_COVER_IMAGES.length, MOBILE_COVER_IMAGES.length);
 
 const SCHEDULED_EVENT: Event = {
   id: 'evento-fixo-2026-04-21-14h',
@@ -42,7 +39,6 @@ const SCHEDULED_EVENT: Event = {
 };
 
 const Home = () => {
-  const [banners, setBanners] = useState<Banner[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [currentBanner, setCurrentBanner] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,13 +69,6 @@ const Home = () => {
     };
 
     const fetchData = async () => {
-      const { data: bannersData } = await supabase
-        .from('banners')
-        .select('*')
-        .eq('active', true)
-        .order('order', { ascending: true });
-      setBanners(bannersData || []);
-
       const { data: eventsData } = await supabase
         .from('events')
         .select('*')
@@ -106,14 +95,6 @@ const Home = () => {
     };
     fetchData();
 
-    const bannerChannel = supabase
-      .channel('home-banners')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, async () => {
-        const { data } = await supabase.from('banners').select('*').eq('active', true).order('order', { ascending: true });
-        setBanners(data || []);
-      })
-      .subscribe();
-
     const eventChannel = supabase
       .channel('home-events')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, async () => {
@@ -123,19 +104,18 @@ const Home = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(bannerChannel);
       supabase.removeChannel(eventChannel);
     };
   }, []);
 
   useEffect(() => {
-    if (banners.length > 1) {
+    if (COVER_CAROUSEL_LENGTH > 1) {
       const timer = setInterval(() => {
-        setCurrentBanner((prev) => (prev + 1) % banners.length);
-      }, 5000);
+        setCurrentBanner((prev) => (prev + 1) % COVER_CAROUSEL_LENGTH);
+      }, 10000);
       return () => clearInterval(timer);
     }
-  }, [banners.length]);
+  }, []);
 
   if (loading) {
     return (
@@ -145,89 +125,44 @@ const Home = () => {
     );
   }
 
+  const activeDesktopCoverImage = DESKTOP_COVER_IMAGES[currentBanner % DESKTOP_COVER_IMAGES.length];
+  const activeMobileCoverImage = MOBILE_COVER_IMAGES[currentBanner % MOBILE_COVER_IMAGES.length];
+
   return (
     <div className="min-h-screen bg-urban-black pt-20 md:pt-24">
-      <section className={`relative overflow-hidden ${banners.length > 0 ? 'h-[40vh] md:h-[50vh]' : 'aspect-[4/5] md:aspect-[8/3]'}`}>
+      <section className="relative overflow-hidden aspect-[4/5] md:aspect-[8/3]">
         <AnimatePresence mode="wait">
-          {banners.length > 0 ? (
-            <motion.div
-              key={currentBanner}
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.8 }}
-              className="absolute inset-0"
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-urban-black via-transparent to-transparent z-10" />
-              <div className="absolute inset-0 bg-black/40 z-10" />
-              <img
-                src={banners[currentBanner].image_url}
-                alt={banners[currentBanner].title}
-                className="w-full h-full object-contain object-top md:object-cover bg-urban-black"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
-                <motion.h2
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="font-display text-4xl md:text-7xl text-white mb-2 tracking-tighter drop-shadow-2xl"
-                >
-                  {banners[currentBanner].title}
-                </motion.h2>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="font-urban text-base md:text-xl text-urban-yellow font-bold uppercase tracking-widest"
-                >
-                  {banners[currentBanner].subtitle}
-                </motion.p>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-urban-gray">
-              <img
-                src={mobileOverlayImage}
-                alt="O SALVE É PRA JESUS"
-                className="absolute inset-0 w-full h-full object-contain object-center block md:hidden bg-urban-black"
-              />
-              <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-urban-black/35 to-transparent md:hidden pointer-events-none" />
-              <div className="absolute inset-x-0 bottom-0 h-28 md:hidden pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-t from-urban-black via-urban-black/95 to-transparent" />
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-16 w-[85%] rounded-full bg-urban-black/70 blur-2xl opacity-70" />
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-10 w-[65%] rounded-full bg-urban-black/80 blur-xl opacity-60" />
-              </div>
-              <div className="absolute inset-0 hidden md:block">
-                <img
-                  src={fallbackBannerImageDesktop}
-                  alt="O SALVE É PRA JESUS"
-                  className="w-full h-full object-cover object-center"
-                />
-                <div className="absolute inset-0 bg-black/35 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-urban-black/95 to-transparent pointer-events-none" />
-                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-urban-black/70 to-transparent pointer-events-none" />
-              </div>
+          <motion.div
+            key={currentBanner}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 flex items-center justify-center bg-urban-gray"
+          >
+            <img
+              src={activeMobileCoverImage}
+              alt="O SALVE É PRA JESUS"
+              className="absolute inset-0 w-full h-full object-cover object-center block md:hidden bg-urban-black"
+            />
+            <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-urban-black/35 to-transparent md:hidden pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-24 md:hidden pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-t from-urban-black/85 via-urban-black/65 to-transparent" />
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-14 w-[82%] rounded-full bg-urban-black/55 blur-2xl opacity-55" />
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-8 w-[60%] rounded-full bg-urban-black/65 blur-xl opacity-45" />
             </div>
-          )}
+            <div className="absolute inset-0 hidden md:block">
+              <img
+                src={activeDesktopCoverImage}
+                alt="O SALVE É PRA JESUS"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-black/28 pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-urban-black/80 to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-urban-black/70 to-transparent pointer-events-none" />
+            </div>
+          </motion.div>
         </AnimatePresence>
-
-        {banners.length > 1 && (
-          <>
-            <button
-              onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white transition-all border border-white/10"
-            >
-              <ChevronLeft size={32} />
-            </button>
-            <button
-              onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white transition-all border border-white/10"
-            >
-              <ChevronRight size={32} />
-            </button>
-          </>
-        )}
       </section>
 
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
