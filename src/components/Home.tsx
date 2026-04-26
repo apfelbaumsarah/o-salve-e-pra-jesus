@@ -143,7 +143,7 @@ const Home = () => {
             <img
               src={activeMobileCoverImage}
               alt="O SALVE É PRA JESUS"
-              className="absolute inset-0 w-full h-full object-cover object-center block md:hidden bg-urban-black"
+              className="absolute inset-0 w-full h-full object-contain object-center block md:hidden bg-urban-black"
             />
             <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-urban-black/35 to-transparent md:hidden pointer-events-none" />
             <div className="absolute inset-x-0 bottom-0 h-24 md:hidden pointer-events-none">
