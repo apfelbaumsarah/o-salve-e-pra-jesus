@@ -79,6 +79,7 @@ function App() {
             <Route path="/historia" element={<AboutTheSalve />} />
             <Route path="/galeria" element={<GalleryIndex />} />
             <Route path="/galeria/:slug" element={<GalleryEvent />} />
+            <Route path="/galeria/:slug/:page" element={<GalleryEvent />} />
             <Route path="/admin" element={<AdminPanel />} />
           </Routes>
         </main>

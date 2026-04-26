@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -31,7 +31,7 @@ interface GalleryPhoto {
 }
 
 const GalleryEvent = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, page } = useParams<{ slug: string; page?: string }>();
   const [event, setEvent] = useState<EventGallery | null>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,7 @@ const GalleryEvent = () => {
   const [notFound, setNotFound] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [loadedPhotoIds, setLoadedPhotoIds] = useState<Record<string, boolean>>({});
+  const photosSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -58,6 +59,31 @@ const GalleryEvent = () => {
       .order('created_at', { ascending: false })
       .range(from, to);
     return { data: data ?? [], count: count ?? 0 };
+  };
+
+  const getRequestedPage = () => {
+    const pageFromPath = Number(page ?? '1');
+    if (Number.isFinite(pageFromPath) && pageFromPath > 0) return pageFromPath;
+
+    // Backward compatibility with old links using ?pagina=
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const pageFromQuery = Number(params.get('pagina') ?? '1');
+      if (Number.isFinite(pageFromQuery) && pageFromQuery > 0) return pageFromQuery;
+    }
+    return 1;
+  };
+
+  const updatePathWithPage = (nextPage: number) => {
+    if (typeof window === 'undefined' || !slug) return;
+    const basePath = `/galeria/${slug}`;
+    const nextPath = nextPage <= 1 ? basePath : `${basePath}/${nextPage}`;
+    if (window.location.pathname === nextPath && !window.location.search) return;
+    window.history.replaceState(null, '', nextPath);
+  };
+
+  const scrollToPhotosTop = () => {
+    photosSectionRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
   };
 
   const fetchEventAndPhotos = async (eventSlug: string) => {
@@ -78,26 +104,34 @@ const GalleryEvent = () => {
 
     setEvent(ev);
 
-    const firstPage = 1;
-    const { data, count } = await fetchPage(ev.id, firstPage);
-    setPhotos(data);
+    const { data: firstPageData, count } = await fetchPage(ev.id, 1);
+    const pageCount = Math.max(1, Math.ceil(count / PAGE_SIZE));
+    const requestedPage = Math.min(getRequestedPage(), pageCount);
+    const resolvedPageData =
+      requestedPage === 1 ? firstPageData : (await fetchPage(ev.id, requestedPage)).data;
+
+    setPhotos(resolvedPageData);
     setLoadedPhotoIds({});
     setTotalCount(count);
-    setCurrentPage(firstPage);
-    setTotalPages(Math.max(1, Math.ceil(count / PAGE_SIZE)));
+    setCurrentPage(requestedPage);
+    setTotalPages(pageCount);
+    updatePathWithPage(requestedPage);
     setLoading(false);
   };
 
   const goToPage = async (page: number) => {
     if (!event || page < 1 || page > totalPages || page === currentPage || loadingPage) return;
+    scrollToPhotosTop();
     setLoadingPage(true);
+    setLightboxIndex(null);
+    setLoadedPhotoIds({});
     try {
       const { data, count } = await fetchPage(event.id, page);
       setPhotos(data);
-      setLoadedPhotoIds({});
       setTotalCount(count);
       setTotalPages(Math.max(1, Math.ceil(count / PAGE_SIZE)));
       setCurrentPage(page);
+      updatePathWithPage(page);
     } finally {
       setLoadingPage(false);
     }
@@ -316,10 +350,20 @@ const GalleryEvent = () => {
       </section>
 
       {/* Photos */}
-      <section className="max-w-7xl mx-auto px-4 py-12">
+      <section ref={photosSectionRef} className="max-w-7xl mx-auto px-4 py-12">
         {paginationControls}
 
-        {photos.length === 0 ? (
+        {loadingPage ? (
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-3">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={`page-loading-${i}`}
+                className="break-inside-avoid mb-3 rounded-lg bg-white/5 animate-pulse"
+                style={{ height: `${150 + (i % 3) * 60}px` }}
+              />
+            ))}
+          </div>
+        ) : photos.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
