@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { motion } from 'motion/react';
-import { Calendar, MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -9,6 +9,7 @@ import mainCoverImage from '../../imagens/35.png';
 import secondaryCoverImage from '../../imagens/36.png';
 import mobileCoverImageOne from '../../imagens/40.png';
 import mobileCoverImageTwo from '../../imagens/41.png';
+import storeImageOne from '../../imagens/store/1.png';
 
 interface Event {
   id: string;
@@ -29,6 +30,10 @@ const GALLERY_EXTERNAL_URL = 'https://www.salveprajesus.org/galeria/salve-pra-je
 const DESKTOP_COVER_IMAGES = [mainCoverImage, secondaryCoverImage];
 const MOBILE_COVER_IMAGES = [mobileCoverImageTwo, mobileCoverImageOne];
 const COVER_CAROUSEL_LENGTH = Math.max(DESKTOP_COVER_IMAGES.length, MOBILE_COVER_IMAGES.length);
+const FEATURED_STORE_PRODUCT = {
+  id: 'camiseta-oficial-salve',
+  name: 'Camiseta Oficial O SALVE! é pra JESUS.',
+};
 
 const SCHEDULED_EVENT: Event = {
   id: 'evento-fixo-2026-04-21-14h',
@@ -170,13 +175,10 @@ const Home = () => {
                   <img
                     src={slideMobileImage}
                     alt="O SALVE É PRA JESUS"
-                    className="absolute inset-0 w-full h-full object-cover object-center block md:hidden bg-urban-black"
+                    className="absolute inset-0 w-full h-full object-cover object-top block md:hidden bg-urban-black"
                   />
                   <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-urban-black/50 to-transparent md:hidden pointer-events-none" />
-                  <div className="absolute inset-x-0 bottom-0 h-16 md:hidden pointer-events-none">
-                    <div className="absolute inset-0 bg-gradient-to-t from-urban-black/95 via-urban-black/55 to-transparent" />
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-10 w-[78%] rounded-full bg-urban-black/80 blur-xl opacity-85" />
-                  </div>
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-urban-black/85 via-urban-black/30 to-transparent md:hidden pointer-events-none" />
                   <div className="absolute inset-0 hidden md:block">
                     <img
                       src={slideDesktopImage}
@@ -224,7 +226,7 @@ const Home = () => {
         </button>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 py-6 md:py-16">
+      <section className="max-w-7xl mx-auto px-4 pt-3 pb-8 md:py-16">
         <div className="py-0">
           <h1 className="font-display text-4xl md:text-6xl text-urban-yellow tracking-tight mb-4">
             O SALVE É REAL.
@@ -239,6 +241,56 @@ const Home = () => {
             CONHECER A HISTÓRIA <ArrowRight size={20} />
           </Link>
         </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="h-1 w-24 rounded-full bg-urban-yellow/90" />
+      </div>
+
+      <section className="max-w-7xl mx-auto px-4 pt-2 pb-10 md:pt-4 md:pb-14">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-7">
+          <div>
+            <h2 className="font-display text-4xl md:text-5xl text-white">
+              SALVE <span className="text-urban-yellow">STORE</span>
+            </h2>
+            <p className="font-urban text-gray-400 mt-2">
+              A primeira coleção oficial já chegou. Garanta a camiseta que marca o início do movimento e vista essa mensagem.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-urban-yellow/30 bg-urban-yellow/10 px-4 py-2 text-xs uppercase tracking-widest text-urban-yellow font-bold">
+            <ShoppingBag size={14} />
+            Colecao atual
+          </span>
+        </div>
+
+        <motion.div whileHover={{ y: -4 }} className="group w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left">
+          <div className="grid md:grid-cols-[1.15fr_0.95fr]">
+            <div className="relative aspect-square md:aspect-auto md:h-full overflow-hidden rounded-l-2xl">
+              <img
+                src={storeImageOne}
+                alt={FEATURED_STORE_PRODUCT.name}
+                className="h-full w-full object-cover object-top md:object-center transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-black/15" />
+            </div>
+            <div className="p-6 md:p-8 lg:p-10">
+              <p className="text-xs uppercase tracking-[0.22em] text-urban-yellow font-bold mb-3">Primeira coleção</p>
+              <h3 className="font-display text-4xl md:text-6xl text-white leading-[0.95] mb-3 uppercase">
+                <span className="block">CAMISETA OFICIAL</span>
+                <span className="block">O SALVE! É PRA JESUS</span>
+              </h3>
+              <p className="text-sm md:text-base text-gray-300 mb-6">
+                Edição de lançamento, feita para quem carrega o SALVE no peito. Estoque limitado.
+              </p>
+              <Link
+                to="/store"
+                className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 rounded-md bg-urban-yellow text-urban-black font-bold uppercase text-sm tracking-wider hover:bg-yellow-400 transition-colors"
+              >
+                Ver produto <ArrowRight size={18} />
+              </Link>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       <section className="max-w-7xl mx-auto px-4 pt-8 pb-20 md:py-20">

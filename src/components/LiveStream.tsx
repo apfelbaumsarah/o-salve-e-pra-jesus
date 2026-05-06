@@ -22,6 +22,39 @@ const FEATURED_VIDEO: Live = {
   is_main: true,
 };
 
+const getYoutubeVideoId = (value: string) => {
+  const input = (value || '').trim();
+  if (!input) return '';
+
+  const idPattern = /^[a-zA-Z0-9_-]{11}$/;
+  if (idPattern.test(input)) return input;
+
+  try {
+    const normalized = input.startsWith('http://') || input.startsWith('https://') ? input : `https://${input}`;
+    const url = new URL(normalized);
+
+    if (url.hostname.includes('youtu.be')) {
+      return url.pathname.replace('/', '').slice(0, 11);
+    }
+
+    if (url.hostname.includes('youtube.com')) {
+      const watchId = url.searchParams.get('v');
+      if (watchId) return watchId.slice(0, 11);
+
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const mediaIndex = pathParts.findIndex((part) => part === 'embed' || part === 'shorts');
+      if (mediaIndex !== -1 && pathParts[mediaIndex + 1]) {
+        return pathParts[mediaIndex + 1].slice(0, 11);
+      }
+    }
+  } catch {
+    const match = input.match(/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[1];
+  }
+
+  return '';
+};
+
 const LiveStream = () => {
   const [lives, setLives] = useState<Live[]>([]);
   const [mainLive, setMainLive] = useState<Live | null>(null);
@@ -73,7 +106,9 @@ const LiveStream = () => {
 
   const getShareData = () => {
     if (!mainLive) return null;
-    const url = `https://www.youtube.com/watch?v=${mainLive.youtube_id}`;
+    const videoId = getYoutubeVideoId(mainLive.youtube_id);
+    if (!videoId) return null;
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
     const text = `Assista "${mainLive.title}" no canal O SALVE é pra JESUS: ${url}`;
     return { url, text, title: mainLive.title };
   };
@@ -119,6 +154,8 @@ const LiveStream = () => {
     );
   }
 
+  const mainVideoId = mainLive ? getYoutubeVideoId(mainLive.youtube_id) : '';
+
   return (
     <div className="min-h-screen bg-urban-black pt-24 pb-20 px-4">
       <div className="max-w-7xl mx-auto">
@@ -144,10 +181,10 @@ const LiveStream = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20">
           <div className="lg:col-span-2">
-            <div className="relative aspect-video rounded-2xl overflow-hidden street-border bg-black">
-              {mainLive ? (
+            <div className="relative aspect-video min-h-[220px] sm:min-h-0 rounded-2xl overflow-hidden street-border bg-black">
+              {mainLive && mainVideoId ? (
                 <iframe
-                  src={`https://www.youtube.com/embed/${mainLive.youtube_id}?autoplay=0&rel=0`}
+                  src={`https://www.youtube.com/embed/${mainVideoId}?autoplay=0&rel=0`}
                   title={mainLive.title}
                   className="absolute inset-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -156,7 +193,7 @@ const LiveStream = () => {
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
                   <Youtube size={64} className="text-gray-700 mb-4" />
-                  <p className="text-gray-500 font-urban">Nenhuma transmissão agendada no momento.</p>
+                  <p className="text-gray-500 font-urban">Nenhuma transmissão disponível no momento.</p>
                 </div>
               )}
             </div>
@@ -210,32 +247,41 @@ const LiveStream = () => {
         <div>
           <h2 className="font-display text-5xl text-white mb-8">TRANSMISSÕES <span className="text-urban-yellow">ANTERIORES</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {lives.filter((l) => l.id !== mainLive?.id).map((live) => (
-              <motion.div
-                key={live.id}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setMainLive(live)}
-                className="group cursor-pointer"
-              >
-                <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-urban-gray border border-white/5 group-hover:border-urban-yellow transition-colors">
-                  <img
-                    src={`https://img.youtube.com/vi/${live.youtube_id}/mqdefault.jpg`}
-                    alt={live.title}
-                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="p-3 bg-urban-yellow rounded-full text-urban-black shadow-xl">
-                      <Play size={24} fill="currentColor" />
+            {lives.filter((l) => l.id !== mainLive?.id).map((live) => {
+              const cardVideoId = getYoutubeVideoId(live.youtube_id);
+              return (
+                <motion.div
+                  key={live.id}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => setMainLive(live)}
+                  className="group cursor-pointer"
+                >
+                  <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-urban-gray border border-white/5 group-hover:border-urban-yellow transition-colors">
+                    {cardVideoId ? (
+                      <img
+                        src={`https://img.youtube.com/vi/${cardVideoId}/mqdefault.jpg`}
+                        alt={live.title}
+                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Youtube size={28} className="text-gray-500" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="p-3 bg-urban-yellow rounded-full text-urban-black shadow-xl">
+                        <Play size={24} fill="currentColor" />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <h4 className="font-urban font-bold text-white text-sm line-clamp-2 mb-1">{live.title}</h4>
-                <p className="text-gray-500 text-xs uppercase">
-                  {live.date ? format(new Date(live.date), 'dd/MM/yyyy', { locale: ptBR }) : ''}
-                </p>
-              </motion.div>
-            ))}
+                  <h4 className="font-urban font-bold text-white text-sm line-clamp-2 mb-1">{live.title}</h4>
+                  <p className="text-gray-500 text-xs uppercase">
+                    {live.date ? format(new Date(live.date), 'dd/MM/yyyy', { locale: ptBR }) : ''}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>
