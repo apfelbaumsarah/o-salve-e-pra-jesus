@@ -15,6 +15,7 @@ import VolunteerSignup from './components/VolunteerSignup';
 import CollectionSignup from './components/CollectionSignup';
 import GalleryIndex from './components/GalleryIndex';
 import GalleryEvent from './components/GalleryEvent';
+import Store from './components/Store';
 import { supabase } from './supabase';
 
 function ScrollToTopOnRouteChange() {
@@ -77,6 +78,7 @@ function App() {
             <Route path="/arrecadacao" element={<FoodDonation />} />
             <Route path="/qrcode" element={<QRCodeDisplay />} />
             <Route path="/historia" element={<AboutTheSalve />} />
+            <Route path="/store" element={<Store />} />
             <Route path="/galeria" element={<GalleryIndex />} />
             <Route path="/galeria/:slug" element={<GalleryEvent />} />
             <Route path="/galeria/:slug/:page" element={<GalleryEvent />} />
