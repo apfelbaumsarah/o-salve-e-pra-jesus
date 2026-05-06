@@ -17,6 +17,7 @@ const SIZES = ['P', 'M', 'G', 'GG'] as const;
 const COLORS = ['BRANCA', 'PRETA', 'BEIGE', 'MARROM'] as const;
 type Size = (typeof SIZES)[number];
 type Color = (typeof COLORS)[number];
+const DEFAULT_WHATSAPP_NUMBER = '5519983095193';
 const PRODUCT_IMAGES = [`${storeImageTwo}?v=20260506-2`, storeImageOne, storeImageThree, storeImageFour, storeImageFive];
 
 const Store = () => {
@@ -25,7 +26,8 @@ const Store = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  const whatsappNumber = (import.meta.env.VITE_STORE_WHATSAPP_NUMBER as string | undefined)?.replace(/\D/g, '') ?? '';
+  const configuredWhatsappNumber = (import.meta.env.VITE_STORE_WHATSAPP_NUMBER as string | undefined)?.replace(/\D/g, '') ?? '';
+  const whatsappNumber = configuredWhatsappNumber || DEFAULT_WHATSAPP_NUMBER;
 
   const whatsappLink = useMemo(() => {
     if (!selectedSize || !selectedColor || !whatsappNumber) return '';
@@ -195,11 +197,6 @@ const Store = () => {
               Adquirir
             </a>
 
-            {!whatsappNumber && (
-              <p className="mt-4 text-sm text-red-600">
-                Configure `VITE_STORE_WHATSAPP_NUMBER` no `.env` para ativar a compra por WhatsApp.
-              </p>
-            )}
           </div>
         </div>
       </div>
