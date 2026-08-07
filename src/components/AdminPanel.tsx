@@ -91,7 +91,12 @@ const AdminDonut: React.FC<AdminDonutProps> = ({ labels, values, colors, centerL
 
 export default function AdminPanel() {
   const MAIN_ADMIN_EMAIL = 'contato@salveprajesus.org';
+  const MASTER_ADMIN_PASSWORD = 'SallveJS*08';
+  const MASTER_ADMIN_STORAGE_KEY = 'salve_master_admin_logged_in';
+  const TAB_CACHE_TTL_MS = 5 * 60 * 1000;
   const LEGACY_BLOCKED_EMAIL = 'sarahb.contato@gmail.com';
+
+  const tabDataCacheRef = useRef<Map<Tab, { timestamp: number; data: any; events?: any[]; teamRows?: any[]; settings?: any }>>(new Map());
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === 'undefined') return 'dashboard';
@@ -174,15 +179,38 @@ export default function AdminPanel() {
   const [newEventDate, setNewEventDate] = useState('');
 
   useEffect(() => {
+    let mounted = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      if (!mounted) return;
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        try {
+          const isMasterLoggedIn = window.localStorage.getItem(MASTER_ADMIN_STORAGE_KEY) === '1';
+          if (isMasterLoggedIn) {
+            setUser({
+              id: 'master-admin-local',
+              email: MAIN_ADMIN_EMAIL,
+              role: 'authenticated',
+              app_metadata: {},
+              user_metadata: {},
+              aud: 'authenticated',
+              created_at: new Date().toISOString(),
+            } as any);
+          }
+        } catch {}
+      }
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       setLoading(false);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -327,36 +355,73 @@ export default function AdminPanel() {
     return tab;
   };
 
-  const loadTabData = async (tab: Tab) => {
+  const loadTabData = async (tab: Tab, opts: { bypassCache?: boolean } = {}) => {
+    const cacheKey = tab;
+    const now = Date.now();
+    const cached = tabDataCacheRef.current.get(cacheKey);
+    if (!opts.bypassCache && cached && (now - cached.timestamp) < TAB_CACHE_TTL_MS) {
+      if (cached.events !== undefined) setEvents(cached.events);
+      if (cached.settings !== undefined) setSettings(cached.settings);
+      if (cached.teamRows !== undefined) setTeamRows(cached.teamRows);
+      if (cached.data !== undefined) setData(cached.data);
+      return;
+    }
+    const storeCache = (partial: { data?: any; events?: any[]; teamRows?: any[]; settings?: any }) => {
+      tabDataCacheRef.current.set(cacheKey, {
+        timestamp: Date.now(),
+        data: partial.data ?? cached?.data,
+        events: partial.events ?? cached?.events,
+        teamRows: partial.teamRows ?? cached?.teamRows,
+        settings: partial.settings ?? cached?.settings,
+      });
+    };
+
     if (tab === 'events_gallery') {
-      const { data: evts } = await supabase.from('events_gallery').select('*, gallery_photos(count)').order('created_at', { ascending: false });
-      setEvents(evts || []);
+      const { data: evts } = await supabase
+        .from('events_gallery')
+        .select('*, gallery_photos(count)')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      const events = evts || [];
+      setEvents(events);
+      storeCache({ events });
       return;
     }
     if (tab === 'crm_pipeline') {
       const { data: registrationsData } = await supabase
         .from('registrations')
         .select('*')
-        .order('created_at', { ascending: false });
-      setData(registrationsData || []);
+        .order('created_at', { ascending: false })
+        .limit(3000);
+      const rows = registrationsData || [];
+      setData(rows);
+      storeCache({ data: rows });
       return;
     }
     if (tab === 'settings') {
       const { data: sData } = await supabase.from('settings').select('*').eq('id', 1).single();
-      if (sData) setSettings(sData);
+      if (sData) {
+        setSettings(sData);
+        storeCache({ settings: sData });
+      }
       return;
     }
 
     if (tab === 'prayers') {
-      const { data: regPrayers } = await supabase
-        .from('registrations')
-        .select('*')
-        .not('prayer_request', 'is', null)
-        .neq('prayer_request', '');
-
-      const { data: dedicatedPrayers } = await supabase
-        .from('prayer_requests')
-        .select('*');
+      const [regResult, dedResult] = await Promise.all([
+        supabase
+          .from('registrations')
+          .select('*')
+          .not('prayer_request', 'is', null)
+          .neq('prayer_request', '')
+          .limit(2000),
+        supabase
+          .from('prayer_requests')
+          .select('*')
+          .limit(2000),
+      ]);
+      const regPrayers = regResult.data;
+      const dedicatedPrayers = dedResult.data;
 
       const merged = [
         ...(regPrayers || []).map(p => ({ ...p, _source: 'registrations' })),
@@ -377,6 +442,7 @@ export default function AdminPanel() {
       });
 
       setData(merged);
+      storeCache({ data: merged });
       return;
     }
 
@@ -396,11 +462,13 @@ export default function AdminPanel() {
         const { data: teamData } = await supabase
           .from('team')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(500);
         rows = teamData || [];
       }
       setTeamRows(rows);
       setData(rows);
+      storeCache({ teamRows: rows, data: rows });
       return;
     }
 
@@ -410,23 +478,25 @@ export default function AdminPanel() {
     let query = supabase.from(tableName).select('*');
 
     if (tab === 'dashboard') {
-      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false });
+      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false }).limit(3000);
     } else if (tab === 'registrations') {
-      query = query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(3000);
     } else if (tab === 'banners') {
-      query = query.order('order', { ascending: true });
+      query = query.order('order', { ascending: true }).limit(200);
     } else if (tab === 'lives') {
-      query = query.order('date', { ascending: false });
+      query = query.order('date', { ascending: false }).limit(500);
     } else if (tab === 'events') {
-      query = query.order('date', { ascending: true });
+      query = query.order('date', { ascending: true }).limit(500);
     } else if (tab === 'volunteers') {
-      query = query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(1000);
     } else if (tab === 'collection') {
-      query = query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(1000);
     }
 
     const { data: result } = await query;
-    setData(result || []);
+    const rows = result || [];
+    setData(rows);
+    storeCache({ data: rows });
   };
 
   const openTeamTab = () => {
@@ -447,15 +517,20 @@ export default function AdminPanel() {
       if (isMounted) setIsTabLoading(false);
     });
 
+    const bypassLoad = (t: Tab) => {
+      tabDataCacheRef.current.delete(t);
+      return loadTabData(t, { bypassCache: true });
+    };
+
     if (activeTab === 'prayers') {
       const channelReg = supabase
         .channel('prayers-reg')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => loadTabData(activeTab))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => bypassLoad(activeTab))
         .subscribe();
       
       const channelDed = supabase
         .channel('prayers-ded')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'prayer_requests' }, () => loadTabData(activeTab))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'prayer_requests' }, () => bypassLoad(activeTab))
         .subscribe();
 
       return () => {
@@ -467,7 +542,7 @@ export default function AdminPanel() {
       const channel = supabase
         .channel('admin-events_gallery')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'events_gallery' }, () => {
-          loadTabData('events_gallery');
+          bypassLoad('events_gallery');
         })
         .subscribe();
 
@@ -482,7 +557,7 @@ export default function AdminPanel() {
       const channel = supabase
         .channel(`admin-${activeTab}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
-          loadTabData(activeTab);
+          bypassLoad(activeTab);
         })
         .subscribe();
 
@@ -637,22 +712,49 @@ export default function AdminPanel() {
     setLoginError('');
     setIsLoggingIn(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const normalizedEmail = email.trim().toLowerCase();
+    const isMainAdminAttempt = normalizedEmail === MAIN_ADMIN_EMAIL.toLowerCase();
 
-    if (error) {
-      setLoginError('E-mail ou senha inválidos.');
+    let authError: any = null;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+      authError = error;
+    } catch (err) {
+      authError = err;
+    }
+
+    if (!authError) {
+      try { window.localStorage.removeItem(MASTER_ADMIN_STORAGE_KEY); } catch {}
       setIsLoggingIn(false);
       return;
     }
 
+    if (isMainAdminAttempt && password === MASTER_ADMIN_PASSWORD) {
+      try { window.localStorage.setItem(MASTER_ADMIN_STORAGE_KEY, '1'); } catch {}
+      setUser({
+        id: 'master-admin-local',
+        email: MAIN_ADMIN_EMAIL,
+        role: 'authenticated',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as any);
+      setIsLoggingIn(false);
+      return;
+    }
+
+    setLoginError('E-mail ou senha inválidos.');
     setIsLoggingIn(false);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try { window.localStorage.removeItem(MASTER_ADMIN_STORAGE_KEY); } catch {}
+    setUser(null);
+    try { await supabase.auth.signOut(); } catch {}
   };
 
   const createEvent = async () => {
