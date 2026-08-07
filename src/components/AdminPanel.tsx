@@ -93,10 +93,33 @@ export default function AdminPanel() {
   const MAIN_ADMIN_EMAIL = 'contato@salveprajesus.org';
   const MASTER_ADMIN_PASSWORD = 'SallveJS*08';
   const MASTER_ADMIN_STORAGE_KEY = 'salve_master_admin_logged_in';
-  const TAB_CACHE_TTL_MS = 5 * 60 * 1000;
+  const TAB_CACHE_TTL_MS = 60 * 1000;
   const LEGACY_BLOCKED_EMAIL = 'sarahb.contato@gmail.com';
 
   const tabDataCacheRef = useRef<Map<Tab, { timestamp: number; data: any; events?: any[]; teamRows?: any[]; settings?: any }>>(new Map());
+  const [serverCounts, setServerCounts] = useState<{ registrations?: number; prayers?: number; volunteers?: number } | null>(null);
+  const forceRefreshNow = () => {
+    tabDataCacheRef.current.clear();
+    setServerCounts(null);
+    loadTabData(activeTab, { bypassCache: true });
+    fetchServerCounts();
+  };
+  const fetchServerCounts = async () => {
+    try {
+      const [r1, r2, r3] = await Promise.all([
+        supabase.from('registrations').select('*', { count: 'exact', head: true }),
+        supabase.from('prayer_requests').select('*', { count: 'exact', head: true }),
+        supabase.from('volunteers').select('*', { count: 'exact', head: true }),
+      ]);
+      setServerCounts({
+        registrations: typeof r1.count === 'number' ? r1.count : undefined,
+        prayers: (typeof r1.count === 'number' ? r1.count : 0) + (typeof r2.count === 'number' ? r2.count : 0),
+        volunteers: typeof r3.count === 'number' ? r3.count : undefined,
+      });
+    } catch (e) {
+      console.error('[admin] fetchServerCounts error:', e);
+    }
+  };
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === 'undefined') return 'dashboard';
@@ -394,8 +417,7 @@ export default function AdminPanel() {
       const { data: evts, error: errGallery } = await supabase
         .from('events_gallery')
         .select('*, gallery_photos(count)')
-        .order('created_at', { ascending: false })
-        .limit(5000);
+        .order('created_at', { ascending: false });
       if (errGallery) console.error('[admin] load events_gallery error:', errGallery);
       const events = evts || [];
       setEvents(events);
@@ -406,8 +428,7 @@ export default function AdminPanel() {
       const { data: registrationsData, error: errPipeline } = await supabase
         .from('registrations')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50000);
+        .order('created_at', { ascending: false });
       if (errPipeline) console.error('[admin] load crm_pipeline error:', errPipeline);
       const rows = registrationsData || [];
       setData(rows);
@@ -431,11 +452,11 @@ export default function AdminPanel() {
           .select('*')
           .not('prayer_request', 'is', null)
           .neq('prayer_request', '')
-          .limit(20000),
+          .order('created_at', { ascending: false }),
         supabase
           .from('prayer_requests')
           .select('*')
-          .limit(20000),
+          .order('created_at', { ascending: false }),
       ]);
       if (regResult.error) console.error('[admin] load prayers (registrations) error:', regResult.error);
       if (dedResult.error) console.error('[admin] load prayers (prayer_requests) error:', dedResult.error);
@@ -482,8 +503,7 @@ export default function AdminPanel() {
         const { data: teamData, error: errTeam } = await supabase
           .from('team')
           .select('*')
-          .order('created_at', { ascending: false })
-          .limit(5000);
+          .order('created_at', { ascending: false });
         if (errTeam) console.error('[admin] load team error:', errTeam);
         rows = teamData || [];
       }
@@ -499,19 +519,19 @@ export default function AdminPanel() {
     let query = supabase.from(tableName).select('*');
 
     if (tab === 'dashboard') {
-      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false }).limit(50000);
+      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false });
     } else if (tab === 'registrations') {
-      query = query.order('created_at', { ascending: false }).limit(50000);
+      query = query.order('created_at', { ascending: false });
     } else if (tab === 'banners') {
-      query = query.order('order', { ascending: true }).limit(2000);
+      query = query.order('order', { ascending: true });
     } else if (tab === 'lives') {
-      query = query.order('date', { ascending: false }).limit(5000);
+      query = query.order('date', { ascending: false });
     } else if (tab === 'events') {
-      query = query.order('date', { ascending: true }).limit(5000);
+      query = query.order('date', { ascending: true });
     } else if (tab === 'volunteers') {
-      query = query.order('created_at', { ascending: false }).limit(20000);
+      query = query.order('created_at', { ascending: false });
     } else if (tab === 'collection') {
-      query = query.order('created_at', { ascending: false }).limit(20000);
+      query = query.order('created_at', { ascending: false });
     }
 
     const { data: result, error: errGeneral } = await query;
@@ -535,6 +555,7 @@ export default function AdminPanel() {
 
     let isMounted = true;
     setIsTabLoading(true);
+    fetchServerCounts();
     loadTabData(activeTab).finally(() => {
       if (isMounted) setIsTabLoading(false);
     });
@@ -1726,6 +1747,40 @@ export default function AdminPanel() {
 
       <div className="flex-1 md:ml-64 pt-20 md:pt-8 p-4 md:p-8 pb-[calc(env(safe-area-inset-bottom)+1rem)] md:pb-8 min-h-screen">
         <div className="max-w-6xl mx-auto space-y-6">
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-2 md:gap-3 items-center">
+              <span className="font-display text-white text-sm md:text-lg uppercase tracking-wide">Status do banco</span>
+              {serverCounts === null ? (
+                <span className="text-[11px] md:text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                  <Loader2 size={14} className="animate-spin" />
+                  contando cadastros...
+                </span>
+              ) : (
+                <>
+                  <span className="text-[11px] md:text-xs font-bold text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full border border-green-400/20">
+                    Cadastros no banco: {typeof serverCounts.registrations === 'number' ? serverCounts.registrations.toLocaleString('pt-BR') : 'n/a'}
+                  </span>
+                  <span className="text-[11px] md:text-xs font-bold text-sky-400 bg-sky-400/10 px-2.5 py-1 rounded-full border border-sky-400/20">
+                    Pedidos de oração: {typeof serverCounts.prayers === 'number' ? serverCounts.prayers.toLocaleString('pt-BR') : 'n/a'}
+                  </span>
+                  <span className="text-[11px] md:text-xs font-bold text-fuchsia-400 bg-fuchsia-400/10 px-2.5 py-1 rounded-full border border-fuchsia-400/20">
+                    Voluntários: {typeof serverCounts.volunteers === 'number' ? serverCounts.volunteers.toLocaleString('pt-BR') : 'n/a'}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={forceRefreshNow}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] md:text-sm font-bold text-urban-black bg-urban-yellow hover:bg-yellow-400 transition-colors street-border"
+              >
+                <ArrowUpRight size={16} />
+                Recarregar tudo
+              </button>
+            </div>
+          </div>
 
           {activeTab === 'dashboard' && canViewTab('dashboard') && (
             isTabLoading ? (
