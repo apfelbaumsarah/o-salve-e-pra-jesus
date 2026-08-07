@@ -359,47 +359,64 @@ export default function AdminPanel() {
     const cacheKey = tab;
     const now = Date.now();
     const cached = tabDataCacheRef.current.get(cacheKey);
+    const isEmptyData = (x: any) => Array.isArray(x) && x.length === 0;
     if (!opts.bypassCache && cached && (now - cached.timestamp) < TAB_CACHE_TTL_MS) {
-      if (cached.events !== undefined) setEvents(cached.events);
-      if (cached.settings !== undefined) setSettings(cached.settings);
-      if (cached.teamRows !== undefined) setTeamRows(cached.teamRows);
-      if (cached.data !== undefined) setData(cached.data);
+      if (cached.events !== undefined && !isEmptyData(cached.events)) setEvents(cached.events);
+      if (cached.settings !== undefined && cached.settings !== null) setSettings(cached.settings);
+      if (cached.teamRows !== undefined && !isEmptyData(cached.teamRows)) setTeamRows(cached.teamRows);
+      if (cached.data !== undefined && !isEmptyData(cached.data)) setData(cached.data);
       return;
     }
     const storeCache = (partial: { data?: any; events?: any[]; teamRows?: any[]; settings?: any }) => {
-      tabDataCacheRef.current.set(cacheKey, {
+      const prevData = cached?.data;
+      const prevEvents = cached?.events;
+      const prevTeamRows = cached?.teamRows;
+      const prevSettings = cached?.settings;
+      const merged = {
         timestamp: Date.now(),
-        data: partial.data ?? cached?.data,
-        events: partial.events ?? cached?.events,
-        teamRows: partial.teamRows ?? cached?.teamRows,
-        settings: partial.settings ?? cached?.settings,
-      });
+        data: partial.data !== undefined
+          ? (isEmptyData(partial.data) && !isEmptyData(prevData) ? prevData : partial.data)
+          : prevData,
+        events: partial.events !== undefined
+          ? (isEmptyData(partial.events) && !isEmptyData(prevEvents) ? prevEvents : partial.events)
+          : prevEvents,
+        teamRows: partial.teamRows !== undefined
+          ? (isEmptyData(partial.teamRows) && !isEmptyData(prevTeamRows) ? prevTeamRows : partial.teamRows)
+          : prevTeamRows,
+        settings: partial.settings !== undefined
+          ? (partial.settings ?? prevSettings)
+          : prevSettings,
+      };
+      tabDataCacheRef.current.set(cacheKey, merged);
     };
 
     if (tab === 'events_gallery') {
-      const { data: evts } = await supabase
+      const { data: evts, error: errGallery } = await supabase
         .from('events_gallery')
         .select('*, gallery_photos(count)')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(5000);
+      if (errGallery) console.error('[admin] load events_gallery error:', errGallery);
       const events = evts || [];
       setEvents(events);
       storeCache({ events });
       return;
     }
     if (tab === 'crm_pipeline') {
-      const { data: registrationsData } = await supabase
+      const { data: registrationsData, error: errPipeline } = await supabase
         .from('registrations')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3000);
+        .limit(50000);
+      if (errPipeline) console.error('[admin] load crm_pipeline error:', errPipeline);
       const rows = registrationsData || [];
       setData(rows);
       storeCache({ data: rows });
       return;
     }
     if (tab === 'settings') {
-      const { data: sData } = await supabase.from('settings').select('*').eq('id', 1).single();
+      const { data: sData, error: errSettings } = await supabase.from('settings').select('*').eq('id', 1).single();
+      if (errSettings && errSettings.code !== 'PGRST116') console.error('[admin] load settings error:', errSettings);
       if (sData) {
         setSettings(sData);
         storeCache({ settings: sData });
@@ -414,12 +431,14 @@ export default function AdminPanel() {
           .select('*')
           .not('prayer_request', 'is', null)
           .neq('prayer_request', '')
-          .limit(2000),
+          .limit(20000),
         supabase
           .from('prayer_requests')
           .select('*')
-          .limit(2000),
+          .limit(20000),
       ]);
+      if (regResult.error) console.error('[admin] load prayers (registrations) error:', regResult.error);
+      if (dedResult.error) console.error('[admin] load prayers (prayer_requests) error:', dedResult.error);
       const regPrayers = regResult.data;
       const dedicatedPrayers = dedResult.data;
 
@@ -455,15 +474,17 @@ export default function AdminPanel() {
         if (!fnError && Array.isArray(fnData?.rows)) {
           rows = fnData.rows;
         }
-      } catch {
+      } catch (e) {
+        console.error('[admin] manage-team-auth (list_team) error:', e);
       }
 
       if (rows.length === 0) {
-        const { data: teamData } = await supabase
+        const { data: teamData, error: errTeam } = await supabase
           .from('team')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(500);
+          .limit(5000);
+        if (errTeam) console.error('[admin] load team error:', errTeam);
         rows = teamData || [];
       }
       setTeamRows(rows);
@@ -478,22 +499,23 @@ export default function AdminPanel() {
     let query = supabase.from(tableName).select('*');
 
     if (tab === 'dashboard') {
-      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false }).limit(3000);
+      query = query.order('prayer_done', { ascending: true }).order('created_at', { ascending: false }).limit(50000);
     } else if (tab === 'registrations') {
-      query = query.order('created_at', { ascending: false }).limit(3000);
+      query = query.order('created_at', { ascending: false }).limit(50000);
     } else if (tab === 'banners') {
-      query = query.order('order', { ascending: true }).limit(200);
+      query = query.order('order', { ascending: true }).limit(2000);
     } else if (tab === 'lives') {
-      query = query.order('date', { ascending: false }).limit(500);
+      query = query.order('date', { ascending: false }).limit(5000);
     } else if (tab === 'events') {
-      query = query.order('date', { ascending: true }).limit(500);
+      query = query.order('date', { ascending: true }).limit(5000);
     } else if (tab === 'volunteers') {
-      query = query.order('created_at', { ascending: false }).limit(1000);
+      query = query.order('created_at', { ascending: false }).limit(20000);
     } else if (tab === 'collection') {
-      query = query.order('created_at', { ascending: false }).limit(1000);
+      query = query.order('created_at', { ascending: false }).limit(20000);
     }
 
-    const { data: result } = await query;
+    const { data: result, error: errGeneral } = await query;
+    if (errGeneral) console.error(`[admin] load tab ${tab} error:`, errGeneral);
     const rows = result || [];
     setData(rows);
     storeCache({ data: rows });
